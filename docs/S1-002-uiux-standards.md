@@ -1,14 +1,15 @@
 # S1-002 — UI/UX Standards
+
 **ATS for Candidates | NJIT CS490 Capstone | Sprint 1 | Spring 2026**
 
-| Field | Detail |
-|-------|--------|
-| Story ID | S1-002 |
-| Sprint | Sprint 1 — Dashboard Foundation, Auth, CI/CD & Profile Baseline |
-| Status | Published |
-| Tech Spec Sections | TECH-SPEC.md §5 (UI Implementation Standards) |
-| Companion Docs | UX.md, S1-001 Engineering Coding Standards |
-| Audience | All engineers, designers + AI coding assistants |
+| Field              | Detail                                                          |
+| ------------------ | --------------------------------------------------------------- |
+| Story ID           | S1-002                                                          |
+| Sprint             | Sprint 1 — Dashboard Foundation, Auth, CI/CD & Profile Baseline |
+| Status             | Published                                                       |
+| Tech Spec Sections | TECH-SPEC.md §5 (UI Implementation Standards)                   |
+| Companion Docs     | UX.md, S1-001 Engineering Coding Standards                      |
+| Audience           | All engineers, designers + AI coding assistants                 |
 
 ---
 
@@ -26,11 +27,11 @@ These standards ensure one thing: **the app feels like a single, coherent produc
 
 The app is candidate-centered. The three qualities that define a successful UX:
 
-| Quality | What It Means in Practice |
-|---------|--------------------------|
+| Quality         | What It Means in Practice                                                                                                                           |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Consistency** | Repeated actions work the same way throughout the app. Button placement, form behaviour, status indicators, and navigation never surprise the user. |
-| **Clarity** | Users always understand what they can do and what just happened. Empty states explain themselves. Errors identify the problem. |
-| **Flow** | Users can move from profile data to job actions to document outcomes without getting lost or being pushed between disconnected screens. |
+| **Clarity**     | Users always understand what they can do and what just happened. Empty states explain themselves. Errors identify the problem.                      |
+| **Flow**        | Users can move from profile data to job actions to document outcomes without getting lost or being pushed between disconnected screens.             |
 
 ---
 
@@ -40,24 +41,24 @@ The app is candidate-centered. The three qualities that define a successful UX:
 
 The team selects **one** of the following at project kickoff and applies it without deviation:
 
-| Pattern | Description |
-|---------|-------------|
+| Pattern                  | Description                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------- |
 | Option A — Left Side Nav | Persistent vertical navigation rail on the left. Recommended for dashboard-heavy apps. |
-| Option B — Top Nav Bar | Horizontal navigation bar across the top. |
-| Option C — Hybrid | Top bar for branding/user controls + left rail for primary destinations. |
+| Option B — Top Nav Bar   | Horizontal navigation bar across the top.                                              |
+| Option C — Hybrid        | Top bar for branding/user controls + left rail for primary destinations.               |
 
 > ⚠️ **Team Decision:** The team has selected Option B — Top Nav Bar as the application’s primary navigation pattern for Sprint 1. All core screens must follow this navigation model consistently. This decision is locked for Sprint 1 and may only be changed after a formal team review and update to the UI/UX standards document..
 >
-> **Chosen pattern:** ___________________________
+> **Chosen pattern:** ****\*\*\*\*****\_\_\_****\*\*\*\*****
 
 ### 3.2 Primary Navigation Destinations
 
-| Destination | Route | Notes |
-|-------------|-------|-------|
-| Dashboard | `/dashboard` | Home page. Default landing after login. |
-| Document Library | `/documents` | Global document management. |
-| Profile | `/profile` | User profile management. |
-| Settings | `/settings` | Account and app settings. |
+| Destination      | Route        | Notes                                   |
+| ---------------- | ------------ | --------------------------------------- |
+| Dashboard        | `/dashboard` | Home page. Default landing after login. |
+| Document Library | `/documents` | Global document management.             |
+| Profile          | `/profile`   | User profile management.                |
+| Settings         | `/settings`  | Account and app settings.               |
 
 ### 3.3 Navigation Rules
 
@@ -74,29 +75,29 @@ The team selects **one** of the following at project kickoff and applies it with
 
 ### 4.1 Chosen Interaction Paradigm
 
-| Model | Description |
-|-------|-------------|
-| Option A — Card Grid | Jobs displayed as cards in a responsive grid. Clicking opens inline detail panel or modal. |
-| Option B — Kanban Board | Jobs arranged in columns by pipeline stage. Cards draggable between stages. |
-| Option C — List View | Jobs as a dense table/list with sortable columns. |
+| Model                   | Description                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| Option A — Card Grid    | Jobs displayed as cards in a responsive grid. Clicking opens inline detail panel or modal. |
+| Option B — Kanban Board | Jobs arranged in columns by pipeline stage. Cards draggable between stages.                |
+| Option C — List View    | Jobs as a dense table/list with sortable columns.                                          |
 
 > ⚠️ **Team Decision:** The team has selected Option C — List View as the dashboard interaction model for Sprint 1. Job applications will be displayed in a structured list/table format to support efficient scanning, sorting, and management of multiple records. This decision is locked for Sprint 1 and cannot be changed without team review.
 
->
-> **Chosen model:** ___________________________
+> **Chosen model:** ****\*\*\*\*****\_\_\_****\*\*\*\*****
 
 ### 4.2 Dashboard Layout Zones
 
-| Zone | Content |
-|------|---------|
-| Dashboard Header | Page title, quick search input, primary action button (Add Job / Import Job) |
-| Stats Bar | Summary counts: Total, Applied, Interview, Offer, Rejected, Archived, Response Rate |
-| Board Controls | Filter controls (stage, status, location, company), sort options |
-| Board Content | Job cards / Kanban columns / list rows |
+| Zone             | Content                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| Dashboard Header | Page title, quick search input, primary action button (Add Job / Import Job)        |
+| Stats Bar        | Summary counts: Total, Applied, Interview, Offer, Rejected, Archived, Response Rate |
+| Board Controls   | Filter controls (stage, status, location, company), sort options                    |
+| Board Content    | Job cards / Kanban columns / list rows                                              |
 
 ### 4.3 Job Card — Required Fields
 
 Every job item must display at minimum:
+
 - Job title (most prominent)
 - Company name
 - Location
@@ -108,6 +109,7 @@ Every job item must display at minimum:
 ### 4.4 Job Detail Experience
 
 A job item must open into a detail view. Options:
+
 - **Inline expansion:** card expands in place (accordion pattern)
 - **Slide-over panel:** detail panel slides in from the right
 - **Detail page:** dedicated route `/dashboard/jobs/:id` with breadcrumb back
@@ -120,14 +122,14 @@ The job detail view must provide access to: all job fields (editable), pipeline 
 
 Define these as tokens in `tailwind.config.ts` under `theme.extend.colors.stage`:
 
-| Stage | Colour Token | Tailwind |
-|-------|-------------|---------|
-| Interested | `stage-interested` | `indigo-500` (#6366F1) |
-| Applied | `stage-applied` | `blue-500` (#3B82F6) |
-| Interview | `stage-interview` | `amber-500` (#F59E0B) |
-| Offer | `stage-offer` | `emerald-500` (#10B981) |
-| Rejected | `stage-rejected` | `red-500` (#EF4444) |
-| Archived | `stage-archived` | `gray-400` (#9CA3AF) |
+| Stage      | Colour Token       | Tailwind                |
+| ---------- | ------------------ | ----------------------- |
+| Interested | `stage-interested` | `indigo-500` (#6366F1)  |
+| Applied    | `stage-applied`    | `blue-500` (#3B82F6)    |
+| Interview  | `stage-interview`  | `amber-500` (#F59E0B)   |
+| Offer      | `stage-offer`      | `emerald-500` (#10B981) |
+| Rejected   | `stage-rejected`   | `red-500` (#EF4444)     |
+| Archived   | `stage-archived`   | `gray-400` (#9CA3AF)    |
 
 ---
 
@@ -142,14 +144,14 @@ Define these as tokens in `tailwind.config.ts` under `theme.extend.colors.stage`
 
 ### 5.2 Button Rules
 
-| Button Type | When to Use |
-|-------------|------------|
-| Primary (`default`) | The single most important action on a surface. Maximum one per section. |
-| Secondary (`outline`) | Important but not primary action. |
-| Ghost / Text | Low-emphasis actions. |
-| Destructive | Delete, remove, archive actions only. Always pair with a confirmation dialog. |
-| Icon-only | Compact actions. Must have an accessible `aria-label`. |
-| Loading state | Show spinner inside button and disable while async action is in flight. |
+| Button Type           | When to Use                                                                   |
+| --------------------- | ----------------------------------------------------------------------------- |
+| Primary (`default`)   | The single most important action on a surface. Maximum one per section.       |
+| Secondary (`outline`) | Important but not primary action.                                             |
+| Ghost / Text          | Low-emphasis actions.                                                         |
+| Destructive           | Delete, remove, archive actions only. Always pair with a confirmation dialog. |
+| Icon-only             | Compact actions. Must have an accessible `aria-label`.                        |
+| Loading state         | Show spinner inside button and disable while async action is in flight.       |
 
 - **Primary action buttons** appear at top-right of a section header or bottom-right of a form.
 - **Destructive actions** must be separated visually from non-destructive actions.
@@ -159,7 +161,7 @@ Define these as tokens in `tailwind.config.ts` under `theme.extend.colors.stage`
 - Use **controlled inputs** throughout. Never uncontrolled/ref-only forms.
 - Every form field must have a **label** using the shadcn `Label` component.
 - **Validation** runs on submit and on blur for required fields. Show inline errors below the offending field using `FormMessage`.
-- **Required fields** marked with red asterisk (*). Optional fields marked with "(optional)".
+- **Required fields** marked with red asterisk (\*). Optional fields marked with "(optional)".
 - **Save/Submit buttons** show a loading spinner while in flight and are disabled until complete.
 - **Preserve unsaved data** on network failure — do not reset the form.
 - **Success state** acknowledged via toast notification or inline confirmation.
@@ -187,6 +189,7 @@ Define these as tokens in `tailwind.config.ts` under `theme.extend.colors.stage`
 ### 5.7 Empty States
 
 Every list, board, or table that can contain zero items must have an empty state that includes:
+
 - An icon or illustration (Lucide icon is sufficient)
 - A short explanatory message
 - A primary action button when applicable
@@ -200,14 +203,14 @@ Every list, board, or table that can contain zero items must have an empty state
 
 Use Tailwind's default spacing scale exclusively. No arbitrary pixel values (e.g., `mt-[17px]`).
 
-| Token | Value | Common Use |
-|-------|-------|-----------|
-| `space-1` | 4px | Tight internal gaps |
-| `space-2` | 8px | Between label and input |
-| `space-4` | 16px | Standard card padding, list item gap |
-| `space-6` | 24px | Section gap within a page |
-| `space-8` | 32px | Between major layout sections |
-| `space-12` | 48px | Page header to content gap |
+| Token      | Value | Common Use                           |
+| ---------- | ----- | ------------------------------------ |
+| `space-1`  | 4px   | Tight internal gaps                  |
+| `space-2`  | 8px   | Between label and input              |
+| `space-4`  | 16px  | Standard card padding, list item gap |
+| `space-6`  | 24px  | Section gap within a page            |
+| `space-8`  | 32px  | Between major layout sections        |
+| `space-12` | 48px  | Page header to content gap           |
 
 ### 6.2 Page Layout
 
@@ -218,13 +221,13 @@ Use Tailwind's default spacing scale exclusively. No arbitrary pixel values (e.g
 
 ### 6.3 Responsive Breakpoints
 
-| Tailwind Prefix | Min Width | Target Device |
-|----------------|-----------|--------------|
-| (none) | 0px | Mobile — base styles |
-| `sm:` | 640px | Large mobile / small tablet |
-| `md:` | 768px | Tablet |
-| `lg:` | 1024px | Desktop (primary target) |
-| `xl:` | 1280px | Large desktop |
+| Tailwind Prefix | Min Width | Target Device               |
+| --------------- | --------- | --------------------------- |
+| (none)          | 0px       | Mobile — base styles        |
+| `sm:`           | 640px     | Large mobile / small tablet |
+| `md:`           | 768px     | Tablet                      |
+| `lg:`           | 1024px    | Desktop (primary target)    |
+| `xl:`           | 1280px    | Large desktop               |
 
 - **Desktop-first:** design and implement at `lg:` first, then add responsive overrides.
 - Core workflows must remain **usable** on mobile — not pixel-perfect, but functional.
@@ -235,22 +238,22 @@ Use Tailwind's default spacing scale exclusively. No arbitrary pixel values (e.g
 
 ### 7.1 Font Stack
 
-| Role | Font |
-|------|------|
+| Role         | Font                                                               |
+| ------------ | ------------------------------------------------------------------ |
 | Primary (UI) | Inter (via `next/font/google`). Fallback: `system-ui, sans-serif`. |
-| Monospace | JetBrains Mono (for code snippets only). |
+| Monospace    | JetBrains Mono (for code snippets only).                           |
 
 ### 7.2 Type Scale
 
-| Token | Size | Use |
-|-------|------|-----|
-| `text-xs` | 12px | Labels, meta info, timestamps |
-| `text-sm` | 14px | Body text in cards, table cells |
-| `text-base` | 16px | Default body text, form inputs |
-| `text-lg` | 18px | Sub-headings, card titles |
-| `text-xl` | 20px | Section headings |
-| `text-2xl` | 24px | Page headings (h2-level) |
-| `text-3xl` | 30px | Primary page title (h1-level) |
+| Token       | Size | Use                             |
+| ----------- | ---- | ------------------------------- |
+| `text-xs`   | 12px | Labels, meta info, timestamps   |
+| `text-sm`   | 14px | Body text in cards, table cells |
+| `text-base` | 16px | Default body text, form inputs  |
+| `text-lg`   | 18px | Sub-headings, card titles       |
+| `text-xl`   | 20px | Section headings                |
+| `text-2xl`  | 24px | Page headings (h2-level)        |
+| `text-3xl`  | 30px | Primary page title (h1-level)   |
 
 ### 7.3 Font Weight
 
@@ -273,20 +276,20 @@ Use Tailwind's default spacing scale exclusively. No arbitrary pixel values (e.g
 
 Define all colours in `tailwind.config.ts`. Reference only as Tailwind classes.
 
-| Name | Hex | Usage |
-|------|-----|-------|
-| Brand Primary | `#2E75B6` | Primary actions, active nav, links |
-| Brand Dark | `#1F4E79` | Page headings, heavy emphasis |
-| Brand Light | `#D9E2F3` | Table headers, selected backgrounds |
-| Surface | `#FFFFFF` | Card and panel backgrounds |
-| Background | `#F8F9FC` | Page background |
-| Border | `#E5E7EB` | Card borders, dividers |
-| Text Primary | `#111827` | Main body text |
-| Text Muted | `#6B7280` | Secondary text |
-| Success | `#10B981` | Success states, offer stage |
-| Warning | `#F59E0B` | Interview stage, deadlines |
-| Error | `#EF4444` | Errors, rejected stage |
-| Info | `#3B82F6` | Applied stage, info states |
+| Name          | Hex       | Usage                               |
+| ------------- | --------- | ----------------------------------- |
+| Brand Primary | `#2E75B6` | Primary actions, active nav, links  |
+| Brand Dark    | `#1F4E79` | Page headings, heavy emphasis       |
+| Brand Light   | `#D9E2F3` | Table headers, selected backgrounds |
+| Surface       | `#FFFFFF` | Card and panel backgrounds          |
+| Background    | `#F8F9FC` | Page background                     |
+| Border        | `#E5E7EB` | Card borders, dividers              |
+| Text Primary  | `#111827` | Main body text                      |
+| Text Muted    | `#6B7280` | Secondary text                      |
+| Success       | `#10B981` | Success states, offer stage         |
+| Warning       | `#F59E0B` | Interview stage, deadlines          |
+| Error         | `#EF4444` | Errors, rejected stage              |
+| Info          | `#3B82F6` | Applied stage, info states          |
 
 > **Note:** Dark mode is out of scope for Sprint 1.
 
@@ -302,13 +305,13 @@ Define all colours in `tailwind.config.ts`. Reference only as Tailwind classes.
 
 ### 9.1 Required States for Interactive Elements
 
-| State | Requirement |
-|-------|------------|
-| Default | Clearly looks interactive |
-| Hover | Visible change — use `transition-colors duration-150` |
-| Focus | Visible focus ring — do not suppress with `outline-none` without replacement |
-| Active | Slight pressed visual feedback on click |
-| Disabled | `opacity-50 cursor-not-allowed`. Must not respond to click events. |
+| State    | Requirement                                                                  |
+| -------- | ---------------------------------------------------------------------------- |
+| Default  | Clearly looks interactive                                                    |
+| Hover    | Visible change — use `transition-colors duration-150`                        |
+| Focus    | Visible focus ring — do not suppress with `outline-none` without replacement |
+| Active   | Slight pressed visual feedback on click                                      |
+| Disabled | `opacity-50 cursor-not-allowed`. Must not respond to click events.           |
 
 ### 9.2 Loading States
 
@@ -351,17 +354,17 @@ Define all colours in `tailwind.config.ts`. Reference only as Tailwind classes.
 
 ## 12. Consistency Rules
 
-| Rule | Requirement |
-|------|------------|
-| One navigation pattern | Chosen at kickoff. Never changes mid-app. |
-| One dashboard model | Chosen at kickoff. Never changes mid-app. |
-| One toast provider | Single Sonner instance at app root. |
-| One modal system | shadcn Dialog only. No custom modals. |
-| One form validation library | React Hook Form + Zod. No other form libraries. |
+| Rule                        | Requirement                                                           |
+| --------------------------- | --------------------------------------------------------------------- |
+| One navigation pattern      | Chosen at kickoff. Never changes mid-app.                             |
+| One dashboard model         | Chosen at kickoff. Never changes mid-app.                             |
+| One toast provider          | Single Sonner instance at app root.                                   |
+| One modal system            | shadcn Dialog only. No custom modals.                                 |
+| One form validation library | React Hook Form + Zod. No other form libraries.                       |
 | Consistent action placement | Primary buttons top-right of section header or bottom-right of forms. |
-| Consistent empty states | Every list/table/board with zero items shows an empty state with CTA. |
-| Consistent error messages | Inline for form fields. Toast for async failures. |
-| No orphan pages | Every screen is reachable from and returns to primary navigation. |
+| Consistent empty states     | Every list/table/board with zero items shows an empty state with CTA. |
+| Consistent error messages   | Inline for form fields. Toast for async failures.                     |
+| No orphan pages             | Every screen is reachable from and returns to primary navigation.     |
 
 ### PR Design Review Checklist
 
