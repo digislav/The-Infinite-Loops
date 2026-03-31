@@ -1,14 +1,15 @@
 # S1-001 — Engineering Coding Standards
+
 **ATS for Candidates | NJIT CS490 Capstone | Sprint 1 | Spring 2026**
 
-| Field | Detail |
-|-------|--------|
-| Story ID | S1-001 |
-| Sprint | Sprint 1 — Dashboard Foundation, Auth, CI/CD & Profile Baseline |
-| Category | A. AI Context Documents (required before feature coding) |
-| Status | Published |
-| Tech Spec Sections | TECH-SPEC.md §§4, 5, 7, 8 |
-| Audience | All engineers + AI coding assistants |
+| Field              | Detail                                                          |
+| ------------------ | --------------------------------------------------------------- |
+| Story ID           | S1-001                                                          |
+| Sprint             | Sprint 1 — Dashboard Foundation, Auth, CI/CD & Profile Baseline |
+| Category           | A. AI Context Documents (required before feature coding)        |
+| Status             | Published                                                       |
+| Tech Spec Sections | TECH-SPEC.md §§4, 5, 7, 8                                       |
+| Audience           | All engineers + AI coding assistants                            |
 
 ---
 
@@ -24,17 +25,17 @@ All team members must follow these standards on every pull request. AI-generated
 
 ## 2. Technology Stack Reference
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 14+ (App Router) + React 18 + TypeScript |
-| Styling | Tailwind CSS + shadcn/ui component library |
-| Backend | Next.js Route Handlers (App Router API routes) |
-| Database | Supabase (PostgreSQL) via Supabase JS client |
-| Authentication | Supabase Auth (JWT-based sessions) |
-| AI Provider | Selectable: OpenAI / Anthropic Claude / Google Gemini |
-| Deployment | Vercel (frontend + serverless functions) |
-| DevOps | Docker (local dev) + GitHub Actions (CI/CD) |
-| Testing | Jest (unit) + Cypress (e2e) |
+| Layer          | Technology                                            |
+| -------------- | ----------------------------------------------------- |
+| Frontend       | Next.js 14+ (App Router) + React 18 + TypeScript      |
+| Styling        | Tailwind CSS + shadcn/ui component library            |
+| Backend        | Next.js Route Handlers (App Router API routes)        |
+| Database       | Supabase (PostgreSQL) via Supabase JS client          |
+| Authentication | Supabase Auth (JWT-based sessions)                    |
+| AI Provider    | Selectable: OpenAI / Anthropic Claude / Google Gemini |
+| Deployment     | Vercel (frontend + serverless functions)              |
+| DevOps         | Docker (local dev) + GitHub Actions (CI/CD)           |
+| Testing        | Jest (unit) + Cypress (e2e)                           |
 
 ---
 
@@ -48,56 +49,56 @@ All team members must follow these standards on every pull request. AI-generated
 
 ### 3.2 TypeScript / JavaScript
 
-| Construct | Convention + Example |
-|-----------|---------------------|
-| Variables & functions | `camelCase` — `getUserProfile`, `jobId`, `isLoading` |
-| React components | `PascalCase` — `JobCard`, `DashboardHeader`, `ProfileForm` |
-| Constants (module-level) | `UPPER_SNAKE_CASE` — `MAX_RESUME_VERSIONS`, `DEFAULT_STAGE` |
-| TypeScript interfaces | `PascalCase` — `Job`, `UserProfile`, `DocumentVersion` |
-| TypeScript type aliases | `PascalCase` — `PipelineStage`, `ApiResponse<T>` |
-| TypeScript enums | `PascalCase` enum, `UPPER` values — `PipelineStage.APPLIED` |
-| Custom hooks | `camelCase`, `use` prefix — `useJobs`, `useAuth`, `useProfile` |
-| Context objects | `PascalCase` + `Context` suffix — `AuthContext`, `JobContext` |
-| Boolean variables | `is/has/can` prefix — `isLoading`, `hasError`, `canEdit` |
-| Event handlers (props) | `handle` prefix — `handleSubmit`, `handleStageChange` |
-| Event handler functions | `on` prefix — `onClick`, `onSuccess`, `onError` |
+| Construct                | Convention + Example                                           |
+| ------------------------ | -------------------------------------------------------------- |
+| Variables & functions    | `camelCase` — `getUserProfile`, `jobId`, `isLoading`           |
+| React components         | `PascalCase` — `JobCard`, `DashboardHeader`, `ProfileForm`     |
+| Constants (module-level) | `UPPER_SNAKE_CASE` — `MAX_RESUME_VERSIONS`, `DEFAULT_STAGE`    |
+| TypeScript interfaces    | `PascalCase` — `Job`, `UserProfile`, `DocumentVersion`         |
+| TypeScript type aliases  | `PascalCase` — `PipelineStage`, `ApiResponse<T>`               |
+| TypeScript enums         | `PascalCase` enum, `UPPER` values — `PipelineStage.APPLIED`    |
+| Custom hooks             | `camelCase`, `use` prefix — `useJobs`, `useAuth`, `useProfile` |
+| Context objects          | `PascalCase` + `Context` suffix — `AuthContext`, `JobContext`  |
+| Boolean variables        | `is/has/can` prefix — `isLoading`, `hasError`, `canEdit`       |
+| Event handlers (props)   | `handle` prefix — `handleSubmit`, `handleStageChange`          |
+| Event handler functions  | `on` prefix — `onClick`, `onSuccess`, `onError`                |
 
 ### 3.3 Database (PostgreSQL / Supabase)
 
-| Construct | Convention + Example |
-|-----------|---------------------|
-| Table names | `snake_case`, plural — `users`, `job_activities`, `document_versions` |
-| Column names | `snake_case` — `user_id`, `created_at`, `pipeline_stage` |
-| Primary keys | `id` (UUID, default `gen_random_uuid()`) |
-| Foreign keys | `{referenced_table_singular}_id` — `user_id`, `job_id`, `document_id` |
-| Timestamps | `created_at`, `updated_at` (`timestamptz`, `NOT NULL`) |
-| Boolean columns | `is_` prefix — `is_archived`, `is_draft` |
-| Enum-like columns | `TEXT` with `CHECK` constraint or Postgres enum |
-| Migration files | `YYYYMMDDHHMMSS_short_description.sql` |
-| Indexes | `idx_{table}_{column}` — `idx_jobs_user_id` |
+| Construct         | Convention + Example                                                  |
+| ----------------- | --------------------------------------------------------------------- |
+| Table names       | `snake_case`, plural — `users`, `job_activities`, `document_versions` |
+| Column names      | `snake_case` — `user_id`, `created_at`, `pipeline_stage`              |
+| Primary keys      | `id` (UUID, default `gen_random_uuid()`)                              |
+| Foreign keys      | `{referenced_table_singular}_id` — `user_id`, `job_id`, `document_id` |
+| Timestamps        | `created_at`, `updated_at` (`timestamptz`, `NOT NULL`)                |
+| Boolean columns   | `is_` prefix — `is_archived`, `is_draft`                              |
+| Enum-like columns | `TEXT` with `CHECK` constraint or Postgres enum                       |
+| Migration files   | `YYYYMMDDHHMMSS_short_description.sql`                                |
+| Indexes           | `idx_{table}_{column}` — `idx_jobs_user_id`                           |
 
 ### 3.4 API Routes
 
-| Convention | Detail |
-|-----------|--------|
-| Resource paths | Lowercase kebab-case nouns, plural — `/api/jobs`, `/api/documents` |
-| Nested resources | `/api/{resource}/{id}/{child}` — `/api/jobs/:id/activities` |
-| Route file naming | Next.js App Router: `app/api/{resource}/route.ts` |
-| Route handler naming | Named exports matching HTTP verbs: `GET`, `POST`, `PUT`, `DELETE`, `PATCH` |
-| No verbs in paths | Use HTTP methods instead — `POST /api/documents` NOT `/api/create-document` |
+| Convention           | Detail                                                                      |
+| -------------------- | --------------------------------------------------------------------------- |
+| Resource paths       | Lowercase kebab-case nouns, plural — `/api/jobs`, `/api/documents`          |
+| Nested resources     | `/api/{resource}/{id}/{child}` — `/api/jobs/:id/activities`                 |
+| Route file naming    | Next.js App Router: `app/api/{resource}/route.ts`                           |
+| Route handler naming | Named exports matching HTTP verbs: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`  |
+| No verbs in paths    | Use HTTP methods instead — `POST /api/documents` NOT `/api/create-document` |
 
 ### 3.5 File and Asset Naming
 
-| Artifact | Convention + Example |
-|----------|---------------------|
-| React component files | `PascalCase.tsx` — `JobCard.tsx`, `DashboardHeader.tsx` |
-| Page files (App Router) | lowercase: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx` |
-| Utility / helper files | `camelCase.ts` — `formatDate.ts`, `apiHelpers.ts` |
-| Hook files | `camelCase.ts` starting with `use` — `useJobs.ts`, `useAuth.ts` |
-| Type definition files | `camelCase.types.ts` — `job.types.ts` |
-| Test files | Same name + `.test.ts(x)` — `JobCard.test.tsx`, `jobService.test.ts` |
-| Supabase migration files | `YYYYMMDDHHMMSS_description.sql` |
-| Environment files | `.env.local` (never committed), `.env.example` (committed) |
+| Artifact                 | Convention + Example                                                 |
+| ------------------------ | -------------------------------------------------------------------- |
+| React component files    | `PascalCase.tsx` — `JobCard.tsx`, `DashboardHeader.tsx`              |
+| Page files (App Router)  | lowercase: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`      |
+| Utility / helper files   | `camelCase.ts` — `formatDate.ts`, `apiHelpers.ts`                    |
+| Hook files               | `camelCase.ts` starting with `use` — `useJobs.ts`, `useAuth.ts`      |
+| Type definition files    | `camelCase.types.ts` — `job.types.ts`                                |
+| Test files               | Same name + `.test.ts(x)` — `JobCard.test.tsx`, `jobService.test.ts` |
+| Supabase migration files | `YYYYMMDDHHMMSS_description.sql`                                     |
+| Environment files        | `.env.local` (never committed), `.env.example` (committed)           |
 
 ---
 
@@ -186,13 +187,13 @@ supabase/
 
 ### 5.1 Toolchain
 
-| Tool | Purpose + Config |
-|------|-----------------|
-| ESLint | Linting — extends `next/core-web-vitals` + `@typescript-eslint/recommended` |
-| Prettier | Formatting — `.prettierrc` committed to repo |
-| TypeScript | Type checking — `tsconfig.json` with `strict: true` |
-| Husky + lint-staged | Pre-commit hook: runs ESLint + Prettier on staged files |
-| GitHub Actions | CI enforces lint, type-check, and build on every PR |
+| Tool                | Purpose + Config                                                            |
+| ------------------- | --------------------------------------------------------------------------- |
+| ESLint              | Linting — extends `next/core-web-vitals` + `@typescript-eslint/recommended` |
+| Prettier            | Formatting — `.prettierrc` committed to repo                                |
+| TypeScript          | Type checking — `tsconfig.json` with `strict: true`                         |
+| Husky + lint-staged | Pre-commit hook: runs ESLint + Prettier on staged files                     |
+| GitHub Actions      | CI enforces lint, type-check, and build on every PR                         |
 
 ### 5.2 Prettier Configuration (`.prettierrc`)
 
@@ -282,10 +283,11 @@ export async function POST(request: Request) {
 ### 7.1 Response Envelope
 
 **Success Response:**
+
 ```json
 {
   "success": true,
-  "data": { },
+  "data": {},
   "meta": {
     "total": 42,
     "page": 1,
@@ -295,6 +297,7 @@ export async function POST(request: Request) {
 ```
 
 **Error Response:**
+
 ```json
 {
   "success": false,
@@ -310,32 +313,32 @@ export async function POST(request: Request) {
 
 ### 7.2 HTTP Status Code Conventions
 
-| Code | When to Use |
-|------|------------|
-| 200 OK | Successful GET, PUT, PATCH |
-| 201 Created | Successful POST that creates a resource |
-| 204 No Content | Successful DELETE (no body) |
-| 400 Bad Request | Input validation failure |
-| 401 Unauthorized | No valid session / not authenticated |
-| 403 Forbidden | Authenticated but not authorized |
-| 404 Not Found | Resource does not exist |
-| 409 Conflict | Duplicate resource (e.g., email already registered) |
-| 500 Internal Server Error | Unexpected server failure |
+| Code                      | When to Use                                         |
+| ------------------------- | --------------------------------------------------- |
+| 200 OK                    | Successful GET, PUT, PATCH                          |
+| 201 Created               | Successful POST that creates a resource             |
+| 204 No Content            | Successful DELETE (no body)                         |
+| 400 Bad Request           | Input validation failure                            |
+| 401 Unauthorized          | No valid session / not authenticated                |
+| 403 Forbidden             | Authenticated but not authorized                    |
+| 404 Not Found             | Resource does not exist                             |
+| 409 Conflict              | Duplicate resource (e.g., email already registered) |
+| 500 Internal Server Error | Unexpected server failure                           |
 
 ### 7.3 Error Code Registry
 
-| Error Code | Meaning |
-|-----------|---------|
-| `VALIDATION_ERROR` | Input failed schema validation |
-| `AUTH_REQUIRED` | Request is not authenticated |
-| `FORBIDDEN` | Authenticated user does not own this resource |
-| `NOT_FOUND` | Requested resource does not exist |
-| `DUPLICATE_EMAIL` | Registration with already-registered email |
-| `INVALID_CREDENTIALS` | Login failed |
-| `TOKEN_EXPIRED` | Reset or session token has expired |
-| `INVALID_STAGE` | Job pipeline stage transition not permitted |
-| `AI_UNAVAILABLE` | AI provider request failed or timed out |
-| `INTERNAL_ERROR` | Unexpected server error (safe fallback) |
+| Error Code            | Meaning                                       |
+| --------------------- | --------------------------------------------- |
+| `VALIDATION_ERROR`    | Input failed schema validation                |
+| `AUTH_REQUIRED`       | Request is not authenticated                  |
+| `FORBIDDEN`           | Authenticated user does not own this resource |
+| `NOT_FOUND`           | Requested resource does not exist             |
+| `DUPLICATE_EMAIL`     | Registration with already-registered email    |
+| `INVALID_CREDENTIALS` | Login failed                                  |
+| `TOKEN_EXPIRED`       | Reset or session token has expired            |
+| `INVALID_STAGE`       | Job pipeline stage transition not permitted   |
+| `AI_UNAVAILABLE`      | AI provider request failed or timed out       |
+| `INTERNAL_ERROR`      | Unexpected server error (safe fallback)       |
 
 ### 7.4 apiSuccess and apiError Helpers
 
@@ -349,7 +352,10 @@ export function apiSuccess<T>(data: T, status = 200, meta?: object) {
 
 export function apiError(code: string, status: number, fields?: object) {
   return NextResponse.json(
-    { success: false, error: { code, message: ERROR_MESSAGES[code] ?? code, ...(fields && { fields }) } },
+    {
+      success: false,
+      error: { code, message: ERROR_MESSAGES[code] ?? code, ...(fields && { fields }) },
+    },
     { status },
   );
 }
@@ -367,12 +373,12 @@ export function apiError(code: string, status: number, fields?: object) {
 
 ### 8.2 Required Test Categories per Feature
 
-| Category | What to Test |
-|----------|-------------|
-| Happy path | Expected inputs produce expected outputs |
-| Validation failure | Invalid inputs are rejected with correct error codes |
-| Error/exception | Service/DB failures are caught and handled gracefully |
-| Authorization | Cross-user access is blocked; unauthenticated requests return 401 |
+| Category           | What to Test                                                      |
+| ------------------ | ----------------------------------------------------------------- |
+| Happy path         | Expected inputs produce expected outputs                          |
+| Validation failure | Invalid inputs are rejected with correct error codes              |
+| Error/exception    | Service/DB failures are caught and handled gracefully             |
+| Authorization      | Cross-user access is blocked; unauthenticated requests return 401 |
 
 ### 8.3 Test Style Rules
 
@@ -387,16 +393,17 @@ export function apiError(code: string, status: number, fields?: object) {
 
 ### 9.1 Branch Naming
 
-| Type | Pattern + Example |
-|------|------------------|
-| Feature | `feature/S1-XXX-short-description` — `feature/S1-019-job-entity` |
-| Bug fix | `fix/S1-XXX-short-description` — `fix/S1-020-card-rendering` |
-| Chore / config | `chore/short-description` — `chore/setup-eslint` |
-| Documentation | `docs/short-description` — `docs/update-s1-001` |
+| Type           | Pattern + Example                                                |
+| -------------- | ---------------------------------------------------------------- |
+| Feature        | `feature/S1-XXX-short-description` — `feature/S1-019-job-entity` |
+| Bug fix        | `fix/S1-XXX-short-description` — `fix/S1-020-card-rendering`     |
+| Chore / config | `chore/short-description` — `chore/setup-eslint`                 |
+| Documentation  | `docs/short-description` — `docs/update-s1-001`                  |
 
 ### 9.2 Commit Message Format
 
 Follow Conventional Commits:
+
 ```
 feat(jobs): add job entity storage with user ownership
 fix(auth): handle expired session on protected routes
@@ -424,13 +431,13 @@ Valid types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `style`, `perf`
 - AI provider API keys must only be accessed server-side (no `NEXT_PUBLIC_` prefix).
 - Never hardcode environment values in application code.
 
-| Variable | Location + Notes |
-|----------|-----------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Client + server — `.env.local` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client + server — `.env.local` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server only — never expose client-side |
-| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | Server only — `.env.local` |
-| `NEXT_PUBLIC_APP_URL` | Client + server — base URL for auth redirects |
+| Variable                               | Location + Notes                              |
+| -------------------------------------- | --------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Client + server — `.env.local`                |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`        | Client + server — `.env.local`                |
+| `SUPABASE_SERVICE_ROLE_KEY`            | Server only — never expose client-side        |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | Server only — `.env.local`                    |
+| `NEXT_PUBLIC_APP_URL`                  | Client + server — base URL for auth redirects |
 
 ---
 

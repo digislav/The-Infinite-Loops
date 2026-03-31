@@ -1,11 +1,11 @@
-import type { Config } from 'jest'
-import nextJest from 'next/jest.js'
- 
+import type { Config } from 'jest';
+import nextJest from 'next/jest.js';
+
 const createJestConfig = nextJest({
   // Provide the path to your Next.js app to load next.config.ts and .env files in your test environment
   dir: './',
-})
- 
+});
+
 // Add any custom config to be passed to Jest
 const config: Config = {
   coverageProvider: 'v8',
@@ -13,6 +13,6 @@ const config: Config = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-}
- 
-export default createJestConfig(config)
+};
+
+export default createJestConfig(config);
