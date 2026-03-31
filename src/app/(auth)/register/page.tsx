@@ -68,17 +68,19 @@ export default function RegisterPage() {
 
       // Supabase typically sends a confirmation email (if confirm emails are enabled via dashboard)
       // Otherwise, user is registered immediately.
-      router.push('/login?registered=true');
+      router.push('/login');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred during registration.');
+      setError(
+        err instanceof Error ? err.message : 'An unexpected error occurred during registration.',
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-muted/30">
-      <Card className="w-full max-w-md shadow-lg border-muted">
+    <div className="bg-muted/30 flex min-h-screen items-center justify-center p-4">
+      <Card className="border-muted w-full max-w-md shadow-lg">
         <CardHeader className="space-y-2 text-center">
           <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
           <CardDescription className="text-muted-foreground">
@@ -88,7 +90,7 @@ export default function RegisterPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md">
+              <div className="rounded-md bg-red-50 p-3 text-sm text-red-500 dark:bg-red-950/50">
                 {error}
               </div>
             )}
@@ -107,12 +109,7 @@ export default function RegisterPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                {...register('password')}
-                disabled={loading}
-              />
+              <Input id="password" type="password" {...register('password')} disabled={loading} />
               {errors.password && (
                 <p className="text-sm font-medium text-red-500">{errors.password.message}</p>
               )}
@@ -129,13 +126,13 @@ export default function RegisterPage() {
                 <p className="text-sm font-medium text-red-500">{errors.confirmPassword.message}</p>
               )}
             </div>
-            <Button className="w-full mt-2" type="submit" disabled={loading}>
+            <Button className="mt-2 w-full" type="submit" disabled={loading}>
               {loading ? 'Registering...' : 'Sign up'}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center border-t p-4 mt-2">
-          <p className="text-sm text-muted-foreground">
+        <CardFooter className="mt-2 flex justify-center border-t p-4">
+          <p className="text-muted-foreground text-sm">
             Already have an account?{' '}
             <a href="/login" className="text-primary font-medium hover:underline">
               Sign in

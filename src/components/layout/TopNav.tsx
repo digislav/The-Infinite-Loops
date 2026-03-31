@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutDashboard, FileText, User, Settings, Menu, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { LayoutDashboard, FileText, User, Settings, Menu, X, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { NavItem } from './NavItem';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
@@ -16,15 +18,22 @@ const navLinks = [
 
 export function TopNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+    <header className="bg-background sticky top-0 z-50 w-full border-b">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link
             href="/dashboard"
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-3 transition-opacity hover:opacity-80"
           >
             <svg width="124" height="124" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
               <defs>
@@ -101,11 +110,11 @@ export function TopNav() {
                 strokeLinecap="round"
               />
             </svg>
-            <span className="font-bold text-xl text-foreground">The Infinite Loops</span>
+            <span className="text-foreground text-xl font-bold">The Infinite Loops</span>
           </Link>
 
           {/* Desktop nav links */}
-          <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
             {navLinks.map((link) => (
               <NavItem key={link.href} href={link.href} label={link.label} icon={link.icon} />
             ))}
@@ -116,6 +125,16 @@ export function TopNav() {
             <Button variant="ghost" size="sm" className="hidden md:flex" aria-label="User menu">
               <User size={18} />
               <span className="ml-2 text-sm font-medium">Account</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hidden hover:text-red-500 md:flex"
+              onClick={handleSignOut}
+              aria-label="Sign out"
+            >
+              <LogOut size={18} />
+              <span className="ml-2 text-sm font-medium">Sign Out</span>
             </Button>
 
             {/* Mobile hamburger button */}
@@ -132,7 +151,7 @@ export function TopNav() {
         </div>
 
         {/* Mobile menu */}
-        <div className={cn('md:hidden border-t pb-4', mobileMenuOpen ? 'block' : 'hidden')}>
+        <div className={cn('border-t pb-4 md:hidden', mobileMenuOpen ? 'block' : 'hidden')}>
           <nav className="flex flex-col gap-1 pt-4" aria-label="Mobile navigation">
             {navLinks.map((link) => (
               <NavItem key={link.href} href={link.href} label={link.label} icon={link.icon} />
