@@ -18,7 +18,7 @@ export type Profile = {
   created_at?: string
 }
 
-export async function saveProfile(profile: any) {
+export async function saveProfile(profile: Profile) {
   const { data, error } = await supabase
     .from('profiles')
     .upsert(profile, { 
