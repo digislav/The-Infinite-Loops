@@ -1,14 +1,15 @@
 # S1-003 — Data & Security Guardrails
+
 **ATS for Candidates | NJIT CS490 Capstone | Sprint 1 | Spring 2026**
 
-| Field | Detail |
-|-------|--------|
-| Story ID | S1-003 |
-| Sprint | Sprint 1 — Dashboard Foundation, Auth, CI/CD & Profile Baseline |
-| Status | Published |
-| Tech Spec Sections | TECH-SPEC.md §§3, 4, 7, 10 |
-| Companion Docs | S1-001 Engineering Coding Standards, Sprint1Demo.md §B1 |
-| Audience | All engineers + AI coding assistants |
+| Field              | Detail                                                          |
+| ------------------ | --------------------------------------------------------------- |
+| Story ID           | S1-003                                                          |
+| Sprint             | Sprint 1 — Dashboard Foundation, Auth, CI/CD & Profile Baseline |
+| Status             | Published                                                       |
+| Tech Spec Sections | TECH-SPEC.md §§3, 4, 7, 10                                      |
+| Companion Docs     | S1-001 Engineering Coding Standards, Sprint1Demo.md §B1         |
+| Audience           | All engineers + AI coding assistants                            |
 
 ---
 
@@ -28,21 +29,21 @@ Security and data isolation are **not optional**. The Sprint 1 demo explicitly r
 
 ### 2.1 Supabase Auth Overview
 
-| Aspect | Detail |
-|--------|--------|
-| Auth provider | Supabase Auth (built on GoTrue) |
-| Session storage | HTTP-only cookies managed by `@supabase/ssr` |
-| Token type | JWT with `sub` claim = `auth.users.id` (UUID) |
-| Password hashing | Handled by Supabase Auth (bcrypt). Never implement custom hashing. |
-| Identity column | `auth.users.id` (UUID) is the authoritative user identity across all tables |
-| Client package | `@supabase/supabase-js` + `@supabase/ssr` for Next.js App Router |
+| Aspect           | Detail                                                                      |
+| ---------------- | --------------------------------------------------------------------------- |
+| Auth provider    | Supabase Auth (built on GoTrue)                                             |
+| Session storage  | HTTP-only cookies managed by `@supabase/ssr`                                |
+| Token type       | JWT with `sub` claim = `auth.users.id` (UUID)                               |
+| Password hashing | Handled by Supabase Auth (bcrypt). Never implement custom hashing.          |
+| Identity column  | `auth.users.id` (UUID) is the authoritative user identity across all tables |
+| Client package   | `@supabase/supabase-js` + `@supabase/ssr` for Next.js App Router            |
 
 ### 2.2 Supabase Client Instances
 
-| Client | File Location + Use |
-|--------|-------------------|
-| Browser client | `lib/supabase/client.ts` — used in React components and client-side hooks. Subject to RLS. |
-| Server client | `lib/supabase/server.ts` — used in API route handlers. Reads session from cookies. Subject to RLS. |
+| Client              | File Location + Use                                                                                                    |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Browser client      | `lib/supabase/client.ts` — used in React components and client-side hooks. Subject to RLS.                             |
+| Server client       | `lib/supabase/server.ts` — used in API route handlers. Reads session from cookies. Subject to RLS.                     |
 | Service role client | `lib/supabase/admin.ts` — **bypasses RLS**. Use ONLY for admin/migration scripts. NEVER in user-facing route handlers. |
 
 > ⚠️ **Warning:** Never import the service role client in a user-facing API route handler. It bypasses all Row Level Security policies.
@@ -66,7 +67,10 @@ export function createClient() {
 // Pattern for every protected route handler
 export async function GET(request: Request) {
   const supabase = createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
   if (error || !user) {
     return apiError('AUTH_REQUIRED', 401);
@@ -82,26 +86,26 @@ export async function GET(request: Request) {
 
 ### 3.1 Core Domain Entities
 
-| Entity | Postgres Table | Ownership Column |
-|--------|---------------|-----------------|
-| User | `auth.users` | `id` (is the owner) |
-| Profile | `profiles` | `user_id → auth.users.id` |
-| Job | `jobs` | `user_id → auth.users.id` |
-| Document | `documents` | `user_id → auth.users.id` |
-| DocumentVersion | `document_versions` | Inherited via `document_id → documents.id` |
-| JobActivity | `job_activities` | Inherited via `job_id → jobs.id` |
-| JobDocumentLink | `job_document_links` | Inherited via `job_id → jobs.id` |
+| Entity          | Postgres Table       | Ownership Column                           |
+| --------------- | -------------------- | ------------------------------------------ |
+| User            | `auth.users`         | `id` (is the owner)                        |
+| Profile         | `profiles`           | `user_id → auth.users.id`                  |
+| Job             | `jobs`               | `user_id → auth.users.id`                  |
+| Document        | `documents`          | `user_id → auth.users.id`                  |
+| DocumentVersion | `document_versions`  | Inherited via `document_id → documents.id` |
+| JobActivity     | `job_activities`     | Inherited via `job_id → jobs.id`           |
+| JobDocumentLink | `job_document_links` | Inherited via `job_id → jobs.id`           |
 
 ### 3.2 Ownership Relationships
 
-| Relationship | Meaning |
-|-------------|---------|
-| User 1:1 Profile | Each user has exactly one profile. |
-| User 1:N Job | A user owns all their job records. No job is accessible to any other user. |
-| User 1:N Document | A user owns all their documents. |
-| Document 1:N DocumentVersion | Ownership checked at the document level. |
-| Job 1:N JobActivity | Ownership checked at the job level. |
-| Job N:N DocumentVersion via JobDocumentLink | Caller must own both the job AND the document. |
+| Relationship                                | Meaning                                                                    |
+| ------------------------------------------- | -------------------------------------------------------------------------- |
+| User 1:1 Profile                            | Each user has exactly one profile.                                         |
+| User 1:N Job                                | A user owns all their job records. No job is accessible to any other user. |
+| User 1:N Document                           | A user owns all their documents.                                           |
+| Document 1:N DocumentVersion                | Ownership checked at the document level.                                   |
+| Job 1:N JobActivity                         | Ownership checked at the job level.                                        |
+| Job N:N DocumentVersion via JobDocumentLink | Caller must own both the job AND the document.                             |
 
 > **Rule:** Ownership of a child entity is always verified through its parent. Never store a redundant `user_id` on child tables — verify the ownership chain instead.
 
@@ -197,7 +201,7 @@ export async function getJobById(jobId: string, ownerId: string) {
     .from('jobs')
     .select('*')
     .eq('id', jobId)
-    .eq('user_id', ownerId)   // ownership enforced in the query
+    .eq('user_id', ownerId) // ownership enforced in the query
     .single();
 
   if (error || !data) {
@@ -225,12 +229,12 @@ const { data } = await supabase
 
 ### 5.4 Authorization Error Response Rules
 
-| Situation | Correct Response |
-|-----------|----------------|
-| No valid session | `401` with `AUTH_REQUIRED` |
+| Situation                                                  | Correct Response                           |
+| ---------------------------------------------------------- | ------------------------------------------ |
+| No valid session                                           | `401` with `AUTH_REQUIRED`                 |
 | Authenticated but resource not found or ownership mismatch | `404` with `NOT_FOUND` — do NOT return 403 |
-| Explicitly forbidden (admin features) | `403` with `FORBIDDEN` |
-| user_id in request body | `400` — strip the field |
+| Explicitly forbidden (admin features)                      | `403` with `FORBIDDEN`                     |
+| user_id in request body                                    | `400` — strip the field                    |
 
 > **Rule:** Return `404` (not `403`) when an authenticated user requests a resource that belongs to someone else. Returning `403` reveals that the resource exists, which is an information leak.
 
@@ -240,12 +244,12 @@ const { data } = await supabase
 
 ### 6.1 Route Classification
 
-| Route Category | Examples | Protection Required |
-|---------------|----------|-------------------|
-| Public routes | `/login`, `/register`, `/reset-password` | None. Redirect authenticated users away from login. |
-| Protected pages | `/dashboard`, `/profile`, `/documents`, `/settings` | Must verify session. Redirect to `/login` if no session. |
-| Protected API routes | `/api/jobs/*`, `/api/profile`, `/api/documents/*` | Must call `supabase.auth.getUser()` first. Return 401 if no session. |
-| Auth API routes | `/api/auth/signup`, `/api/auth/login`, `/api/auth/logout` | No session check. Handle Supabase Auth operations. |
+| Route Category       | Examples                                                  | Protection Required                                                  |
+| -------------------- | --------------------------------------------------------- | -------------------------------------------------------------------- |
+| Public routes        | `/login`, `/register`, `/reset-password`                  | None. Redirect authenticated users away from login.                  |
+| Protected pages      | `/dashboard`, `/profile`, `/documents`, `/settings`       | Must verify session. Redirect to `/login` if no session.             |
+| Protected API routes | `/api/jobs/*`, `/api/profile`, `/api/documents/*`         | Must call `supabase.auth.getUser()` first. Return 401 if no session. |
+| Auth API routes      | `/api/auth/signup`, `/api/auth/login`, `/api/auth/logout` | No session check. Handle Supabase Auth operations.                   |
 
 ### 6.2 Frontend Route Protection (Next.js Middleware)
 
@@ -260,16 +264,22 @@ export async function middleware(request: NextRequest) {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get: (n) => request.cookies.get(n)?.value,
-                 set: (n, v, o) => response.cookies.set(n, v, o),
-                 remove: (n, o) => response.cookies.delete({ name: n, ...o }) } },
+    {
+      cookies: {
+        get: (n) => request.cookies.get(n)?.value,
+        set: (n, v, o) => response.cookies.set(n, v, o),
+        remove: (n, o) => response.cookies.delete({ name: n, ...o }),
+      },
+    },
   );
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
-                     request.nextUrl.pathname.startsWith('/register');
-  const isProtected = !isAuthPage &&
-                      !request.nextUrl.pathname.startsWith('/api/auth');
+  const isAuthPage =
+    request.nextUrl.pathname.startsWith('/login') ||
+    request.nextUrl.pathname.startsWith('/register');
+  const isProtected = !isAuthPage && !request.nextUrl.pathname.startsWith('/api/auth');
 
   if (!user && isProtected) {
     return NextResponse.redirect(new URL('/login', request.url));
@@ -298,16 +308,16 @@ export const config = {
 
 > ⚠️ **Warning:** These patterns are inspected during code review and during the Sprint 1 demo (Phase B – B1). Any of these found in merged code is a **security defect**, not a style issue.
 
-| Prohibited Pattern | Why It Is Dangerous | Required Fix |
-|-------------------|--------------------|----|
-| Fetch all rows, filter in application code | Returns ALL users' data from the DB | Add `.eq('user_id', ownerId)` to the query |
-| Trust `user_id` from request body or URL param | Attacker supplies another user's ID | Always source `user_id` from session (`user.id`) |
-| Use service role client in route handler | Bypasses RLS; any authenticated user gets all rows | Use server client. Reserve service role for admin scripts only. |
-| Return `403` on ownership mismatch | Reveals that the resource exists | Return `404` — treat another user's resources as non-existent |
-| No ownership check on child entity | User can access activities for jobs they don't own | Check ownership through parent |
+| Prohibited Pattern                               | Why It Is Dangerous                                           | Required Fix                                                            |
+| ------------------------------------------------ | ------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Fetch all rows, filter in application code       | Returns ALL users' data from the DB                           | Add `.eq('user_id', ownerId)` to the query                              |
+| Trust `user_id` from request body or URL param   | Attacker supplies another user's ID                           | Always source `user_id` from session (`user.id`)                        |
+| Use service role client in route handler         | Bypasses RLS; any authenticated user gets all rows            | Use server client. Reserve service role for admin scripts only.         |
+| Return `403` on ownership mismatch               | Reveals that the resource exists                              | Return `404` — treat another user's resources as non-existent           |
+| No ownership check on child entity               | User can access activities for jobs they don't own            | Check ownership through parent                                          |
 | No backend ownership check (frontend-only guard) | Client-side guard is trivially bypassed with direct API calls | Always check `supabase.auth.getUser()` in every protected route handler |
-| Include other users' data in list responses | List endpoint returns rows from all users | Every list query must include `.eq('user_id', user.id)` |
-| Logging PII or auth tokens | Log files become a data breach vector | Log only UUIDs, routes, timestamps, error codes |
+| Include other users' data in list responses      | List endpoint returns rows from all users                     | Every list query must include `.eq('user_id', user.id)`                 |
+| Logging PII or auth tokens                       | Log files become a data breach vector                         | Log only UUIDs, routes, timestamps, error codes                         |
 
 ---
 
@@ -324,12 +334,12 @@ export const config = {
 
 ## 9. Settings and Account Management Security
 
-| Operation | Security Requirement |
-|-----------|---------------------|
-| Change email | Require current password confirmation. Send confirmation email to new address first. |
-| Change password | Use `supabase.auth.updateUser({ password: newPassword })` — never update directly in DB. |
-| Delete account | Require current password + explicit confirmation dialog. Cascades to all user data via `ON DELETE CASCADE`. |
-| View account info | Sourced entirely from session — no `user_id` parameter accepted. |
+| Operation         | Security Requirement                                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| Change email      | Require current password confirmation. Send confirmation email to new address first.                        |
+| Change password   | Use `supabase.auth.updateUser({ password: newPassword })` — never update directly in DB.                    |
+| Delete account    | Require current password + explicit confirmation dialog. Cascades to all user data via `ON DELETE CASCADE`. |
+| View account info | Sourced entirely from session — no `user_id` parameter accepted.                                            |
 
 ---
 
@@ -337,12 +347,12 @@ export const config = {
 
 ### 10.1 Required Test Categories
 
-| Test Category | What Must Be Tested |
-|--------------|-------------------|
-| Unauthenticated access | Route handler returns `401` when no valid session is present. |
-| Ownership — read | User B cannot read User A's Job, Profile, or Document. Returns `404`. |
-| Ownership — write | User B cannot update or delete User A's records. Returns `404`. |
-| Ownership — child | User B cannot access JobActivities belonging to User A's jobs. |
+| Test Category                | What Must Be Tested                                                      |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| Unauthenticated access       | Route handler returns `401` when no valid session is present.            |
+| Ownership — read             | User B cannot read User A's Job, Profile, or Document. Returns `404`.    |
+| Ownership — write            | User B cannot update or delete User A's records. Returns `404`.          |
+| Ownership — child            | User B cannot access JobActivities belonging to User A's jobs.           |
 | user_id injection prevention | Request body containing `user_id` is ignored; session `user.id` is used. |
 
 ### 10.2 Test Pattern
@@ -352,9 +362,9 @@ describe('GET /api/jobs/:id', () => {
   it('returns 404 when authenticated user does not own the job', async () => {
     const userAJob = await createTestJob({ userId: USER_A_ID });
 
-    const response = await makeAuthenticatedRequest(
-      'GET', `/api/jobs/${userAJob.id}`, { userId: USER_B_ID }
-    );
+    const response = await makeAuthenticatedRequest('GET', `/api/jobs/${userAJob.id}`, {
+      userId: USER_B_ID,
+    });
 
     expect(response.status).toBe(404);
     expect(response.body.error.code).toBe('NOT_FOUND');
@@ -370,13 +380,13 @@ describe('GET /api/jobs/:id', () => {
 
 ### 10.3 Sprint 1 Demo Evidence Checklist (B1)
 
-| Demo Requirement | Guardrail That Covers It |
-|-----------------|------------------------|
-| Show User B cannot view or modify User A data | Section 5.2 — `.eq('user_id', ownerId)` in service query |
-| Show one backend enforcement point in code | Section 5.2 — `getJobById` service function; Section 6.2 — middleware |
-| Show deny behavior (404) | Section 5.4 — return `404` for ownership mismatch |
-| Show one unit test asserting ownership denial | Section 10.2 — ownership denial test |
-| Two test accounts (User A and User B) | Section 3.1 — both users have own isolated rows; seed data before demo |
+| Demo Requirement                              | Guardrail That Covers It                                               |
+| --------------------------------------------- | ---------------------------------------------------------------------- |
+| Show User B cannot view or modify User A data | Section 5.2 — `.eq('user_id', ownerId)` in service query               |
+| Show one backend enforcement point in code    | Section 5.2 — `getJobById` service function; Section 6.2 — middleware  |
+| Show deny behavior (404)                      | Section 5.4 — return `404` for ownership mismatch                      |
+| Show one unit test asserting ownership denial | Section 10.2 — ownership denial test                                   |
+| Two test accounts (User A and User B)         | Section 3.1 — both users have own isolated rows; seed data before demo |
 
 > ⚠️ **Warning:** No ownership/isolation proof results in a major deduction (6 of 15 points). Prepare User A and User B test accounts and seed data before demo day.
 
@@ -384,13 +394,13 @@ describe('GET /api/jobs/:id', () => {
 
 ## 11. Supabase-Specific Security Rules
 
-| Rule | Detail |
-|------|--------|
-| Enable RLS on every table | `ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;` must be in every migration. |
-| No public SELECT policies | Never allow unauthenticated (anon) users to read any user-scoped table. |
-| Anon key is public | The `NEXT_PUBLIC_SUPABASE_ANON_KEY` is visible in the browser. RLS must be airtight. |
-| `auth.uid()` in policies | Use `auth.uid()` in RLS policies — this is the session-verified user ID. |
-| Supabase Storage | Apply Storage policies that mirror RLS: users can only access their own file paths. |
+| Rule                      | Detail                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| Enable RLS on every table | `ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;` must be in every migration.         |
+| No public SELECT policies | Never allow unauthenticated (anon) users to read any user-scoped table.              |
+| Anon key is public        | The `NEXT_PUBLIC_SUPABASE_ANON_KEY` is visible in the browser. RLS must be airtight. |
+| `auth.uid()` in policies  | Use `auth.uid()` in RLS policies — this is the session-verified user ID.             |
+| Supabase Storage          | Apply Storage policies that mirror RLS: users can only access their own file paths.  |
 
 ---
 

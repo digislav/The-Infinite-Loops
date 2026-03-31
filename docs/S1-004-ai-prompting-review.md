@@ -1,14 +1,15 @@
 # S1-004 — AI Prompting & Review Standards
+
 **ATS for Candidates | NJIT CS490 Capstone | Sprint 1 | Spring 2026**
 
-| Field | Detail |
-|-------|--------|
-| Story ID | S1-004 |
-| Sprint | Sprint 1 — Dashboard Foundation, Auth, CI/CD & Profile Baseline |
-| Status | Published |
-| Tech Spec Sections | TECH-SPEC.md §§6, 7, 8, 11 |
-| Companion Docs | S1-001 Engineering Coding Standards, S1-002 UI/UX Standards, S1-003 Data & Security Guardrails |
-| Audience | All engineers + AI coding assistants |
+| Field              | Detail                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| Story ID           | S1-004                                                                                         |
+| Sprint             | Sprint 1 — Dashboard Foundation, Auth, CI/CD & Profile Baseline                                |
+| Status             | Published                                                                                      |
+| Tech Spec Sections | TECH-SPEC.md §§6, 7, 8, 11                                                                     |
+| Companion Docs     | S1-001 Engineering Coding Standards, S1-002 UI/UX Standards, S1-003 Data & Security Guardrails |
+| Audience           | All engineers + AI coding assistants                                                           |
 
 ---
 
@@ -30,12 +31,12 @@ An AI coding assistant with no project context will invent conventions, ignore s
 
 ### 2.2 Context Document Inventory
 
-| Document | File | Primary Concerns |
-|----------|------|-----------------|
-| S1-001 Engineering Coding Standards | `docs/S1-001-engineering-coding-standards.md` | Naming conventions, folder structure, linting, error handling, API response shapes |
-| S1-002 UI/UX Standards | `docs/S1-002-uiux-standards.md` | Navigation model, dashboard interaction, component usage, spacing, typography, colour |
-| S1-003 Data & Security Guardrails | `docs/S1-003-data-security-guardrails.md` | Per-user data ownership, authorization checks, RLS policies, protected routes |
-| S1-004 AI Prompting & Review Standards | `docs/S1-004-ai-prompting-review.md` | This document. |
+| Document                               | File                                          | Primary Concerns                                                                      |
+| -------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------- |
+| S1-001 Engineering Coding Standards    | `docs/S1-001-engineering-coding-standards.md` | Naming conventions, folder structure, linting, error handling, API response shapes    |
+| S1-002 UI/UX Standards                 | `docs/S1-002-uiux-standards.md`               | Navigation model, dashboard interaction, component usage, spacing, typography, colour |
+| S1-003 Data & Security Guardrails      | `docs/S1-003-data-security-guardrails.md`     | Per-user data ownership, authorization checks, RLS policies, protected routes         |
+| S1-004 AI Prompting & Review Standards | `docs/S1-004-ai-prompting-review.md`          | This document.                                                                        |
 
 > **Rule:** Before writing any AI prompt for a feature, identify which context documents are relevant and include them. A backend API route prompt must include S1-001 and S1-003 at minimum. A frontend component prompt must include S1-001 and S1-002 at minimum.
 
@@ -54,12 +55,12 @@ An AI coding assistant with no project context will invent conventions, ignore s
 
 ### 3.1 Anatomy of a Good Prompt
 
-| Part | What to Include |
-|------|----------------|
-| 1. Context | Paste or reference the relevant context documents. State the tech stack: Next.js 14 App Router, TypeScript strict mode, Supabase, Tailwind CSS, shadcn/ui. |
-| 2. Scope | Name the Jira story ID (e.g., S1-019) and state the specific outcome. |
-| 3. Constraints | List non-negotiable rules: ownership check required, use `apiSuccess`/`apiError` helpers, no `any` type, use shadcn/ui components. |
-| 4. Task | The specific ask: 'Write the GET /api/jobs route handler'. |
+| Part           | What to Include                                                                                                                                            |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Context     | Paste or reference the relevant context documents. State the tech stack: Next.js 14 App Router, TypeScript strict mode, Supabase, Tailwind CSS, shadcn/ui. |
+| 2. Scope       | Name the Jira story ID (e.g., S1-019) and state the specific outcome.                                                                                      |
+| 3. Constraints | List non-negotiable rules: ownership check required, use `apiSuccess`/`apiError` helpers, no `any` type, use shadcn/ui components.                         |
+| 4. Task        | The specific ask: 'Write the GET /api/jobs route handler'.                                                                                                 |
 
 ### 3.2 Prompt Templates
 
@@ -153,28 +154,28 @@ Do not write happy-path-only tests.
 
 ### 3.3 Prompting Anti-Patterns to Avoid
 
-| Anti-Pattern | Why It Produces Bad Output | Better Approach |
-|-------------|--------------------------|----------------|
-| Vague task with no context docs | AI uses generic conventions that conflict with project standards | Always attach relevant context docs before the task |
-| Single mega-prompt for an entire feature | Too large to review carefully; errors compound | Prompt for one unit at a time: one route handler, one component, one test suite |
-| Asking AI to 'just make it work' | Skips validation, errors, and ownership | State explicit constraints |
-| Copy-pasting output without reading it | Security bugs and invented conventions slip through | Read every line. If you can't explain it, don't merge it. |
-| Reusing a stale conversation for a new task | AI carries wrong assumptions from previous context | Start a new session for each distinct task |
-| Asking AI to skip tests to save time | CI will fail; story Definition of Done is not met | Always prompt for tests as part of implementation |
-| Trusting AI-generated SQL without reading it | SQL is where ownership and injection vulnerabilities hide | Read every SQL statement. Verify ownership columns and RLS policies. |
+| Anti-Pattern                                 | Why It Produces Bad Output                                       | Better Approach                                                                 |
+| -------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Vague task with no context docs              | AI uses generic conventions that conflict with project standards | Always attach relevant context docs before the task                             |
+| Single mega-prompt for an entire feature     | Too large to review carefully; errors compound                   | Prompt for one unit at a time: one route handler, one component, one test suite |
+| Asking AI to 'just make it work'             | Skips validation, errors, and ownership                          | State explicit constraints                                                      |
+| Copy-pasting output without reading it       | Security bugs and invented conventions slip through              | Read every line. If you can't explain it, don't merge it.                       |
+| Reusing a stale conversation for a new task  | AI carries wrong assumptions from previous context               | Start a new session for each distinct task                                      |
+| Asking AI to skip tests to save time         | CI will fail; story Definition of Done is not met                | Always prompt for tests as part of implementation                               |
+| Trusting AI-generated SQL without reading it | SQL is where ownership and injection vulnerabilities hide        | Read every SQL statement. Verify ownership columns and RLS policies.            |
 
 ### 3.4 Iterative Prompting
 
 Build complex features in stages:
 
-| Stage | Prompt Focus |
-|-------|-------------|
-| 1. Types and schema | Define TypeScript types and Zod schemas first. Review before implementation. |
-| 2. Service layer | Implement service function with ownership check. Review and test before wiring to route. |
-| 3. Route handler | Implement API route handler. Review error handling and response envelope. |
-| 4. Unit tests | Generate tests covering all four required categories. |
-| 5. Frontend component | Build the UI component. Review for shadcn/ui usage, spacing tokens, accessibility. |
-| 6. Integration | Wire the component to the API via a custom hook. Review data flow end-to-end. |
+| Stage                 | Prompt Focus                                                                             |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| 1. Types and schema   | Define TypeScript types and Zod schemas first. Review before implementation.             |
+| 2. Service layer      | Implement service function with ownership check. Review and test before wiring to route. |
+| 3. Route handler      | Implement API route handler. Review error handling and response envelope.                |
+| 4. Unit tests         | Generate tests covering all four required categories.                                    |
+| 5. Frontend component | Build the UI component. Review for shadcn/ui usage, spacing tokens, accessibility.       |
+| 6. Integration        | Wire the component to the API via a custom hook. Review data flow end-to-end.            |
 
 ---
 
@@ -186,23 +187,23 @@ Build complex features in stages:
 
 ### 4.2 Self-Review Before Committing (Author Checklist)
 
-| Review Item | Required |
-|-------------|---------|
-| I have read every line of the generated code | ✅ Required |
-| Code follows naming conventions from S1-001 | ✅ Required |
-| TypeScript is strict — no `any`, all exports typed | ✅ Required |
-| No secrets or `.env` values hardcoded | ✅ Required |
-| API route handler calls `supabase.auth.getUser()` first | ✅ If API route |
-| Ownership check included in every DB query (`.eq('user_id', user.id)`) | ✅ If DB query |
-| `user_id` never sourced from request body or URL params | ✅ If write operation |
-| `apiSuccess`/`apiError` helpers used — no raw `NextResponse.json()` | ✅ If API route |
-| shadcn/ui components used — no custom modal divs | ✅ If UI component |
-| Tailwind spacing tokens only — no arbitrary values | ✅ If UI component |
-| All five interactive states implemented | ✅ If interactive UI |
-| RLS policies present in migration SQL | ✅ If migration |
-| Unit tests cover happy path, validation, error, and auth failure | ✅ Required |
-| No commented-out code or debug `console.log` | ✅ Required |
-| I can explain what every function and query does | ✅ Required |
+| Review Item                                                            | Required              |
+| ---------------------------------------------------------------------- | --------------------- |
+| I have read every line of the generated code                           | ✅ Required           |
+| Code follows naming conventions from S1-001                            | ✅ Required           |
+| TypeScript is strict — no `any`, all exports typed                     | ✅ Required           |
+| No secrets or `.env` values hardcoded                                  | ✅ Required           |
+| API route handler calls `supabase.auth.getUser()` first                | ✅ If API route       |
+| Ownership check included in every DB query (`.eq('user_id', user.id)`) | ✅ If DB query        |
+| `user_id` never sourced from request body or URL params                | ✅ If write operation |
+| `apiSuccess`/`apiError` helpers used — no raw `NextResponse.json()`    | ✅ If API route       |
+| shadcn/ui components used — no custom modal divs                       | ✅ If UI component    |
+| Tailwind spacing tokens only — no arbitrary values                     | ✅ If UI component    |
+| All five interactive states implemented                                | ✅ If interactive UI  |
+| RLS policies present in migration SQL                                  | ✅ If migration       |
+| Unit tests cover happy path, validation, error, and auth failure       | ✅ Required           |
+| No commented-out code or debug `console.log`                           | ✅ Required           |
+| I can explain what every function and query does                       | ✅ Required           |
 
 ### 4.3 Peer Review (PR Reviewer Checklist)
 
@@ -230,11 +231,11 @@ Build complex features in stages:
 
 AI-generated code requires the same test coverage as human-authored code. Per TECH-SPEC §7, a story is not done unless tests cover all four required categories:
 
-| Test Category | What Must Be Covered |
-|--------------|---------------------|
-| Happy path | Expected inputs produce expected outputs. |
-| Validation failure | Invalid inputs return correct 400 response with field-level error detail. |
-| Error / exception | Downstream failures return 500 with a safe message. |
+| Test Category      | What Must Be Covered                                                         |
+| ------------------ | ---------------------------------------------------------------------------- |
+| Happy path         | Expected inputs produce expected outputs.                                    |
+| Validation failure | Invalid inputs return correct 400 response with field-level error detail.    |
+| Error / exception  | Downstream failures return 500 with a safe message.                          |
 | Auth and ownership | No session → 401. Wrong owner → 404. Mandatory for every protected endpoint. |
 
 ### 5.2 Prompting for Tests
@@ -277,36 +278,41 @@ Per TECH-SPEC §7.5, the following are insufficient and will be rejected in PR r
 
 ### 6.1 PR Requirements
 
-| Requirement | Detail |
-|-------------|--------|
-| PR title includes Jira story ID | e.g., `[S1-019] Implement Basic Job Entity and Storage` |
-| PR description notes AI usage | State which parts were AI-generated and which AI tool was used. |
-| Tech Spec sections referenced | Per TECH-SPEC §11 — list impacted sections. |
-| Context docs used listed | State which S1-001 through S1-004 docs were included in prompts. |
-| All CI checks pass | Lint, type-check, build, and unit tests all green. |
-| Author self-review complete | Author confirms they have read every line of AI-generated code. |
-| At least one peer approval | A teammate who did not author the PR has reviewed and approved. |
-| No direct push to main | All changes arrive via pull request. No exceptions. |
+| Requirement                     | Detail                                                           |
+| ------------------------------- | ---------------------------------------------------------------- |
+| PR title includes Jira story ID | e.g., `[S1-019] Implement Basic Job Entity and Storage`          |
+| PR description notes AI usage   | State which parts were AI-generated and which AI tool was used.  |
+| Tech Spec sections referenced   | Per TECH-SPEC §11 — list impacted sections.                      |
+| Context docs used listed        | State which S1-001 through S1-004 docs were included in prompts. |
+| All CI checks pass              | Lint, type-check, build, and unit tests all green.               |
+| Author self-review complete     | Author confirms they have read every line of AI-generated code.  |
+| At least one peer approval      | A teammate who did not author the PR has reviewed and approved.  |
+| No direct push to main          | All changes arrive via pull request. No exceptions.              |
 
 ### 6.2 PR Description Template
 
 ```markdown
 ## Story
+
 [S1-XXX] Story title
 
 ## What This PR Does
+
 Brief description of the change.
 
 ## AI Usage
+
 - AI tool used: [Claude / GitHub Copilot / ChatGPT / Cursor / None]
 - Parts generated by AI: [e.g., route handler, Zod schema, migration SQL]
 - Parts written manually: [e.g., unit tests, ownership check adjustment]
 - Context docs included in prompts: [e.g., S1-001, S1-003]
 
 ## Tech Spec Sections Impacted
+
 [e.g., TECH-SPEC.md §3, §4, §7]
 
 ## Test Evidence
+
 - [ ] Happy path test present
 - [ ] Validation failure test present
 - [ ] Auth failure (401) test present
@@ -314,6 +320,7 @@ Brief description of the change.
 - [ ] CI checks passing
 
 ## Security / Ownership Impact
+
 [Describe how ownership is enforced, or state 'Not applicable' with reason]
 ```
 
@@ -321,28 +328,29 @@ Brief description of the change.
 
 ## 7. Prohibited AI Usage Patterns
 
-| Prohibited Pattern | Risk | Required Alternative |
-|-------------------|------|---------------------|
-| Merging AI code that has not been read | Security defects go undetected | Read every line before committing. |
-| Using AI to generate fake third-party API integrations | Violates PRD §4.4 — AI must not simulate unavailable APIs | Build only integrations defined in scope. |
-| AI-generating RLS policies with public SELECT | Unauthenticated users can read the entire table | Review every RLS policy. Ensure `auth.uid() = user_id`. |
-| Prompting AI without context docs for security-sensitive code | AI will omit ownership checks or trust client `user_id` | Always include S1-003 in prompts for backend/database code. |
-| AI-generating environment values or secrets inline | Secrets committed to git create a permanent breach record | Verify output contains no hardcoded secrets. |
-| Using AI to write tests after the fact to hit a coverage target | Tests written to match existing code produce meaningless coverage | Prompt for tests based on feature requirements, not implementation. |
-| AI-generating direct database access in React components | Violates architecture boundaries; bypasses server-side ownership checks | All DB access goes through API route handlers. |
+| Prohibited Pattern                                              | Risk                                                                    | Required Alternative                                                |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Merging AI code that has not been read                          | Security defects go undetected                                          | Read every line before committing.                                  |
+| Using AI to generate fake third-party API integrations          | Violates PRD §4.4 — AI must not simulate unavailable APIs               | Build only integrations defined in scope.                           |
+| AI-generating RLS policies with public SELECT                   | Unauthenticated users can read the entire table                         | Review every RLS policy. Ensure `auth.uid() = user_id`.             |
+| Prompting AI without context docs for security-sensitive code   | AI will omit ownership checks or trust client `user_id`                 | Always include S1-003 in prompts for backend/database code.         |
+| AI-generating environment values or secrets inline              | Secrets committed to git create a permanent breach record               | Verify output contains no hardcoded secrets.                        |
+| Using AI to write tests after the fact to hit a coverage target | Tests written to match existing code produce meaningless coverage       | Prompt for tests based on feature requirements, not implementation. |
+| AI-generating direct database access in React components        | Violates architecture boundaries; bypasses server-side ownership checks | All DB access goes through API route handlers.                      |
 
 ---
 
 ## 8. Jira Traceability for AI-Assisted Work
 
-| Artefact | Required Content |
-|----------|----------------|
-| Jira story | References relevant Tech Spec sections. Definition of Done includes test and ownership checks. |
-| Jira sub-tasks | Note AI tool used in the sub-task description. |
-| Pull request | References story ID in title. PR description completed per Section 6.2 template. |
-| Commit messages | Follow Conventional Commits format from S1-001 §9.2. |
+| Artefact        | Required Content                                                                               |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| Jira story      | References relevant Tech Spec sections. Definition of Done includes test and ownership checks. |
+| Jira sub-tasks  | Note AI tool used in the sub-task description.                                                 |
+| Pull request    | References story ID in title. PR description completed per Section 6.2 template.               |
+| Commit messages | Follow Conventional Commits format from S1-001 §9.2.                                           |
 
 **Suggested Jira custom fields:**
+
 - `Tech Spec Sections` — e.g., §3, §4, §7
 - `Test Evidence` — link or description of test coverage
 - `Security/Ownership Impact` — brief description or 'N/A'
@@ -353,16 +361,19 @@ Brief description of the change.
 ## 9. Sprint Application Guidance
 
 ### Sprint 1 — Establish the Pattern
+
 - S1-001 through S1-004 must be in `docs/` before any feature coding begins.
 - Start with low-risk units: use AI for boilerplate first (Zod schemas, TypeScript types, migration SQL structure).
 - **Ownership checks are non-negotiable in Sprint 1** — the demo requires demonstrating backend ownership enforcement.
 
 ### Sprint 2 — Scale with Discipline
+
 - AI can be used more broadly for dashboard workflow features and profile completion.
 - The author self-review checklist (Section 4.2) remains mandatory on every AI-generated PR.
 - AI-generated test suites must still be inspected for missing auth/ownership cases.
 
 ### Sprint 3 — Harden and Deploy
+
 - Use AI for deployment config and GitHub Actions improvements — but review CI/CD output extremely carefully.
 - Smoke-test AI-assisted deployment changes in a staging environment before merging to main.
 - Do not use AI to generate analytics from fabricated data — analytics must be derived from real stored fields.
@@ -373,21 +384,21 @@ Brief description of the change.
 
 ### 10.1 Permitted AI Feature Scope
 
-| Permitted AI Feature | API Endpoint |
-|--------------------|-------------|
-| Resume bullet rewriting | `POST /api/ai/generate-resume` |
+| Permitted AI Feature                | API Endpoint                                      |
+| ----------------------------------- | ------------------------------------------------- |
+| Resume bullet rewriting             | `POST /api/ai/generate-resume`                    |
 | Resume tailoring to job description | `POST /api/ai/generate-resume` (with job context) |
-| Cover letter generation | `POST /api/ai/generate-cover-letter` |
+| Cover letter generation             | `POST /api/ai/generate-cover-letter`              |
 
 > ⚠️ **Warning:** AI is not permitted as a substitute for unavailable external APIs, as a source of fabricated data, or as a hidden automation layer. Per PRD §4.4, fake integrations are prohibited.
 
 ### 10.2 AI Provider Configuration
 
-| Provider | Model Recommendation | Key Environment Variable |
-|----------|--------------------|-----------------------|
-| Gemini (Google) | `gemini-2.5-pro` (free tier) | `GEMINI_API_KEY` |
-| Claude (Anthropic) | `claude-sonnet-4-6` | `ANTHROPIC_API_KEY` |
-| ChatGPT (OpenAI) | `gpt-4o-mini` | `OPENAI_API_KEY` |
+| Provider           | Model Recommendation         | Key Environment Variable |
+| ------------------ | ---------------------------- | ------------------------ |
+| Gemini (Google)    | `gemini-2.5-pro` (free tier) | `GEMINI_API_KEY`         |
+| Claude (Anthropic) | `claude-sonnet-4-6`          | `ANTHROPIC_API_KEY`      |
+| ChatGPT (OpenAI)   | `gpt-4o-mini`                | `OPENAI_API_KEY`         |
 
 - All AI API keys are **server-side only**. Never prefix with `NEXT_PUBLIC_`.
 - Provider selection is controlled by an `AI_PROVIDER` environment variable.
@@ -405,15 +416,12 @@ Brief description of the change.
 
 ```typescript
 // aiService.ts — prompt construction pattern
-export async function generateCoverLetter(
-  profile: UserProfile,
-  job: Job,
-): Promise<string> {
+export async function generateCoverLetter(profile: UserProfile, job: Job): Promise<string> {
   const prompt = buildCoverLetterPrompt(profile, job); // server-side builder
   try {
     const result = await callAIProvider(prompt);
     logger.info('cover_letter_generated', {
-      userId: profile.userId,  // UUID only, no PII
+      userId: profile.userId, // UUID only, no PII
       provider: AI_PROVIDER,
       model: AI_MODEL,
     });
