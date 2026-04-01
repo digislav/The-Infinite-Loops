@@ -49,7 +49,7 @@ The team selects **one** of the following at project kickoff and applies it with
 
 > ⚠️ **Team Decision:** The team has selected Option B — Top Nav Bar as the application’s primary navigation pattern for Sprint 1. All core screens must follow this navigation model consistently. This decision is locked for Sprint 1 and may only be changed after a formal team review and update to the UI/UX standards document..
 >
-> **Chosen pattern:** ****\*\*\*\*****\_\_\_****\*\*\*\*****
+> **Chosen pattern:** \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 ### 3.2 Primary Navigation Destinations
 
@@ -83,7 +83,7 @@ The team selects **one** of the following at project kickoff and applies it with
 
 > ⚠️ **Team Decision:** The team has selected Option C — List View as the dashboard interaction model for Sprint 1. Job applications will be displayed in a structured list/table format to support efficient scanning, sorting, and management of multiple records. This decision is locked for Sprint 1 and cannot be changed without team review.
 
-> **Chosen model:** ****\*\*\*\*****\_\_\_****\*\*\*\*****
+> **Chosen model:** \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 ### 4.2 Dashboard Layout Zones
 
