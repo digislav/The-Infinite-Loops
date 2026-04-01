@@ -206,6 +206,22 @@ export function TopNav() {
             {navLinks.map((link) => (
               <NavItem key={link.href} href={link.href} label={link.label} icon={link.icon} />
             ))}
+            <div className="my-2 border-t" />
+            <div className="px-4 py-2">
+              <p className="text-muted-foreground text-xs font-medium">Logged in as</p>
+              <p className="truncate text-sm font-semibold">{user?.email || 'Loading...'}</p>
+            </div>
+            <div className="px-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground w-full justify-start hover:text-red-500"
+                onClick={handleSignOut}
+              >
+                <LogOut size={16} className="mr-2" />
+                <span className="text-sm font-medium">Sign Out</span>
+              </Button>
+            </div>
           </nav>
         </div>
       </div>
