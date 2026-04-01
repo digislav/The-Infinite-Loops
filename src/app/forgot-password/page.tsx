@@ -1,39 +1,39 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function ForgotPasswordPage() {
   const supabase = createClient();
 
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    setMessage("");
-    setError("");
+    setMessage('');
+    setError('');
     setLoading(true);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "http://localhost:3000/reset-password",
+      redirectTo: 'http://localhost:3000/api/auth/callback?next=/reset-password',
     });
 
     if (error) {
       setError(error.message);
     } else {
-      setMessage("Check your email for the reset link.");
+      setMessage('Check your email for the reset link.');
     }
 
     setLoading(false);
   };
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-6 border rounded-lg">
-      <h1 className="text-2xl font-bold mb-4">Forgot Password</h1>
+    <div className="mx-auto mt-20 max-w-md rounded-lg border p-6">
+      <h1 className="mb-4 text-2xl font-bold">Forgot Password</h1>
 
       <form onSubmit={handleResetPassword} className="space-y-4">
         <input
@@ -41,16 +41,12 @@ export default function ForgotPasswordPage() {
           placeholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full border p-2 rounded"
+          className="w-full rounded border p-2"
           required
         />
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full border p-2 rounded"
-        >
-          {loading ? "Sending..." : "Send Reset Link"}
+        <button type="submit" disabled={loading} className="w-full rounded border p-2">
+          {loading ? 'Sending...' : 'Send Reset Link'}
         </button>
       </form>
 

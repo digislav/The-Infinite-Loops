@@ -1,7 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+const publicRoutes = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/api/auth/callback',
+];
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -39,8 +45,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If the user IS logged in and tries to access login/register, redirect to /dashboard
-  if (user && publicRoutes.some((route) => pathname.startsWith(route))) {
+  // If the user IS logged in and tries to access login/register/etc., redirect to /dashboard
+  // EXCEPT for /reset-password where they need to be "logged in" to change it
+  if (
+    user &&
+    publicRoutes.some((route) => pathname.startsWith(route)) &&
+    pathname !== '/reset-password'
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
