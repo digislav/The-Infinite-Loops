@@ -24,7 +24,7 @@ export function TopNav() {
           {/* Logo */}
           <Link
             href="/dashboard"
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-3 transition-opacity hover:underline decoration-primary"
           >
             <svg width="124" height="124" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
               <defs>
@@ -113,7 +113,12 @@ export function TopNav() {
 
           {/* Right side — user menu */}
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="hidden md:flex" aria-label="User menu">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hidden md:flex hover:underline hover:font-semibold"
+              aria-label="User menu"
+            >
               <User size={18} />
               <span className="ml-2 text-sm font-medium">Account</span>
             </Button>

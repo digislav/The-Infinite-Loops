@@ -18,7 +18,7 @@ export function NavItem({ href, label, icon }: NavItemProps) {
       href={href}
       className={cn(
         'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150',
-        'hover:bg-accent hover:text-accent-foreground',
+        'hover:bg-accent hover:text-accent-foreground hover:underline hover:font-semibold',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground',
       )}
