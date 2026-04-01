@@ -66,7 +66,7 @@ export function TopNav() {
           {/* Logo */}
           <Link
             href="/dashboard"
-            className="flex items-center gap-3 transition-opacity hover:underline decoration-primary"
+            className="decoration-primary flex items-center gap-3 transition-opacity hover:underline"
           >
             <svg width="124" height="124" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
               <defs>
