@@ -2,24 +2,57 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, FileText, User, Settings, Menu, X, LogOut } from 'lucide-react';
-import { useState } from 'react';
+import {
+  LogOut,
+  LayoutDashboard,
+  FileText,
+  User as UserIcon,
+  Settings,
+  Menu,
+  X,
+} from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { NavItem } from './NavItem';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { type User } from '@supabase/supabase-js';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
   { href: '/documents', label: 'Document Library', icon: <FileText size={16} /> },
-  { href: '/profile', label: 'Profile', icon: <User size={16} /> },
+  { href: '/profile', label: 'Profile', icon: <UserIcon size={16} /> },
   { href: '/settings', label: 'Settings', icon: <Settings size={16} /> },
 ];
 
 export function TopNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    fetchUser();
+  }, [supabase]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -122,20 +155,37 @@ export function TopNav() {
 
           {/* Right side — user menu */}
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="hidden md:flex" aria-label="User menu">
-              <User size={18} />
-              <span className="ml-2 text-sm font-medium">Account</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hidden hover:text-red-500 md:flex"
-              onClick={handleSignOut}
-              aria-label="Sign out"
-            >
-              <LogOut size={18} />
-              <span className="ml-2 text-sm font-medium">Sign Out</span>
-            </Button>
+            <div className="relative" ref={dropdownRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn('hidden md:flex', accountOpen && 'bg-accent')}
+                onClick={() => setAccountOpen(!accountOpen)}
+                aria-label="User menu"
+              >
+                <UserIcon size={18} />
+                <span className="ml-2 text-sm font-medium">Account</span>
+              </Button>
+
+              {accountOpen && (
+                <div className="bg-popover animate-in fade-in zoom-in absolute right-0 mt-2 w-56 origin-top-right rounded-md border p-2 shadow-lg duration-200">
+                  <div className="px-2 py-1.5">
+                    <p className="text-muted-foreground text-xs font-medium">Logged in as</p>
+                    <p className="truncate text-sm font-semibold">{user?.email || 'Loading...'}</p>
+                  </div>
+                  <div className="my-1 border-t" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground w-full justify-start hover:text-red-500"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut size={16} className="mr-2" />
+                    <span className="text-sm font-medium">Sign Out</span>
+                  </Button>
+                </div>
+              )}
+            </div>
 
             {/* Mobile hamburger button */}
             <Button
