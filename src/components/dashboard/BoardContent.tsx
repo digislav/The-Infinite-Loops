@@ -1,10 +1,13 @@
 'use client';
 
-import { BriefcaseIcon, Flag } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BriefcaseIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Flag } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Job, PipelineStage } from '@/types/job.types';
+import type { Job, PipelineStage, JobRecord } from '@/types/job.types';
+import { toUIJob } from '@/types/job.types';
 
 const stageStyles: Record<PipelineStage, string> = {
   Interested: 'bg-indigo-100 text-indigo-700',
@@ -26,53 +29,92 @@ function isDeadlineOverdue(deadline?: string): boolean {
   return new Date(deadline).getTime() < Date.now();
 }
 
-const MOCK_JOBS: Job[] = [
-  {
-    id: '1',
-    title: 'Frontend Engineer',
-    company: 'Acme Corp',
-    location: 'New York, NY',
-    pipelineStage: 'Applied',
-    lastActivityDate: 'Apr 1, 2026',
-    deadline: '2026-04-05',
-    priorityFlag: true,
-  },
-  {
-    id: '2',
-    title: 'Full Stack Developer',
-    company: 'Tech Startup',
-    location: 'Remote',
-    pipelineStage: 'Interview',
-    lastActivityDate: 'Mar 30, 2026',
-  },
-  {
-    id: '3',
-    title: 'Software Engineer',
-    company: 'Big Tech Co',
-    location: 'San Francisco, CA',
-    pipelineStage: 'Offer',
-    lastActivityDate: 'Mar 28, 2026',
-  },
-  {
-    id: '4',
-    title: 'React Developer',
-    company: 'Agency Inc',
-    location: 'Austin, TX',
-    pipelineStage: 'Interested',
-    lastActivityDate: 'Mar 25, 2026',
-  },
-  {
-    id: '5',
-    title: 'Junior Developer',
-    company: 'Startup XYZ',
-    location: 'Boston, MA',
-    pipelineStage: 'Rejected',
-    lastActivityDate: 'Mar 20, 2026',
-  },
-];
-
 export function BoardContent() {
-  if (MOCK_JOBS.length === 0) {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchJobs() {
+      try {
+        const res = await fetch('/api/jobs');
+        if (!res.ok) throw new Error('Failed to fetch jobs');
+        const json = await res.json();
+        const records: JobRecord[] = json.data ?? [];
+        setJobs(records.map(toUIJob));
+      } catch {
+        setError('Failed to load jobs. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchJobs();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="w-full overflow-x-auto rounded-lg border border-gray-200">
+        <table className="w-full text-sm">
+          <thead className="border-b border-gray-200 bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">Job Title</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">Company</th>
+              <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 md:table-cell">
+                Location
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">Stage</th>
+              <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 lg:table-cell">
+                Last Activity
+              </th>
+              <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 lg:table-cell">
+                Deadline
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {[1, 2, 3].map((i) => (
+              <tr key={i} className="border-b border-gray-100">
+                <td className="px-4 py-3">
+                  <div className="h-4 w-32 animate-pulse rounded bg-gray-200" />
+                </td>
+                <td className="px-4 py-3">
+                  <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
+                </td>
+                <td className="hidden px-4 py-3 md:table-cell">
+                  <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+                </td>
+                <td className="px-4 py-3">
+                  <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+                </td>
+                <td className="hidden px-4 py-3 lg:table-cell">
+                  <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+                </td>
+                <td className="hidden px-4 py-3 lg:table-cell">
+                  <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+        <p className="text-lg font-semibold text-red-600">{error}</p>
+        <Button
+          onClick={() => window.location.reload()}
+          className="bg-[#2E75B6] text-white hover:bg-[#1F4E79]"
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (jobs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#D9E2F3]">
@@ -95,7 +137,6 @@ export function BoardContent() {
   return (
     <div className="w-full overflow-x-auto rounded-lg border border-gray-200">
       <table className="w-full text-sm">
-        {/* Table Header */}
         <thead className="border-b border-gray-200 bg-gray-50">
           <tr>
             <th className="px-4 py-3 text-left font-semibold text-gray-600">Job Title</th>
@@ -112,26 +153,22 @@ export function BoardContent() {
             </th>
           </tr>
         </thead>
-
-        {/* Table Body */}
         <tbody className="divide-y divide-gray-100 bg-white">
-          {MOCK_JOBS.map((job) => {
+          {jobs.map((job) => {
             const deadlineSoon = isDeadlineSoon(job.deadline);
             const deadlineOverdue = isDeadlineOverdue(job.deadline);
-
             return (
               <tr
                 key={job.id}
-                className="cursor-pointer transition-colors duration-150 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+                className="cursor-pointer transition-colors duration-150 hover:bg-blue-50"
                 tabIndex={0}
                 role="button"
                 aria-label={`${job.title} at ${job.company}`}
+                onClick={() => console.log('Job clicked:', job.id)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') console.log('Job clicked:', job.id);
                 }}
-                onClick={() => console.log('Job clicked:', job.id)}
               >
-                {/* Job Title */}
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-gray-900">{job.title}</span>
@@ -140,14 +177,8 @@ export function BoardContent() {
                     )}
                   </div>
                 </td>
-
-                {/* Company */}
                 <td className="px-4 py-3 text-gray-600">{job.company}</td>
-
-                {/* Location */}
                 <td className="hidden px-4 py-3 text-gray-500 md:table-cell">{job.location}</td>
-
-                {/* Stage */}
                 <td className="px-4 py-3">
                   <Badge
                     className={cn(
@@ -158,13 +189,9 @@ export function BoardContent() {
                     {job.pipelineStage}
                   </Badge>
                 </td>
-
-                {/* Last Activity */}
                 <td className="hidden px-4 py-3 text-gray-500 lg:table-cell">
                   {job.lastActivityDate}
                 </td>
-
-                {/* Deadline */}
                 <td className="hidden px-4 py-3 lg:table-cell">
                   {job.deadline ? (
                     <span
