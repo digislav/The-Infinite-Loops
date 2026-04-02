@@ -48,9 +48,14 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
 
   return (
     <div className="flex flex-col gap-8">
+
       {/* Completion Indicator */}
       <CompletionIndicator percentage={completion} />
-      {hasUnsavedChanges && <p className="-mt-4 text-xs text-amber-600">* Unsaved changes</p>}
+      {hasUnsavedChanges && (
+        <p className="text-xs text-amber-600 -mt-4">
+          * Unsaved changes
+        </p>
+      )}
 
       {/* Identity and Contact Section */}
       <div className="flex flex-col gap-4">
@@ -220,6 +225,7 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
           {isSaving ? 'Saving...' : 'Save Profile'}
         </Button>
       </div>
+
     </div>
   );
 }
