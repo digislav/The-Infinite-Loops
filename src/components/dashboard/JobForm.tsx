@@ -50,11 +50,16 @@ export const jobFormSchema = z.object({
   title: z.string().min(1, 'Job title is required'),
   company: z.string().min(1, 'Company is required'),
   location: z.string().optional(),
-  pipelineStage: z.enum(['Interested', 'Applied', 'Interview', 'Offer', 'Rejected', 'Archived'], {
-    required_error: 'Pipeline stage is required',
-  }),
+  pipelineStage: z.enum([
+    'Interested',
+    'Applied',
+    'Interview',
+    'Offer',
+    'Rejected',
+    'Archived',
+  ] as const),
   deadline: z.string().optional(),
-  priorityFlag: z.boolean().default(false),
+  priorityFlag: z.boolean(),
 });
 
 export type JobFormValues = z.infer<typeof jobFormSchema>;
@@ -82,7 +87,7 @@ export interface JobFormProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function JobForm({ job, onSubmit, onCancel }: JobFormProps): JSX.Element {
+export function JobForm({ job, onSubmit, onCancel }: JobFormProps) {
   const isEditMode = Boolean(job);
 
   const form = useForm<JobFormValues>({

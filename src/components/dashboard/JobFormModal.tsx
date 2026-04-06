@@ -9,7 +9,7 @@ export interface JobFormModalProps {
   onSubmit: (data: JobFormValues) => Promise<void> | void;
 }
 
-export function JobFormModal({ job, onSubmit }: JobFormModalProps): JSX.Element {
+export function JobFormModal({ job, onSubmit }: JobFormModalProps) {
   const [open, setOpen] = useState(false);
   const isEditMode = Boolean(job);
 
