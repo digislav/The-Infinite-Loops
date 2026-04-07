@@ -1,13 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BriefcaseIcon } from 'lucide-react';
+import { BriefcaseIcon, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Flag } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
 import type { Job, PipelineStage, JobRecord } from '@/types/job.types';
 import { toUIJob } from '@/types/job.types';
+import { JobFormModal } from './JobFormModal';
+import type { JobFormValues } from './JobForm';
 
 const stageStyles: Record<PipelineStage, string> = {
   Interested: 'bg-indigo-100 text-indigo-700',
@@ -34,22 +37,54 @@ export function BoardContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchJobs() {
-      try {
-        const res = await fetch('/api/jobs');
-        if (!res.ok) throw new Error('Failed to fetch jobs');
-        const json = await res.json();
-        const records: JobRecord[] = json.data ?? [];
-        setJobs(records.map(toUIJob));
-      } catch {
-        setError('Failed to load jobs. Please try again.');
-      } finally {
-        setLoading(false);
-      }
+  async function fetchJobs() {
+    try {
+      const res = await fetch('/api/jobs');
+      if (!res.ok) throw new Error('Failed to fetch jobs');
+      const json = await res.json();
+      const records: JobRecord[] = json.data ?? [];
+      setJobs(records.map(toUIJob));
+    } catch {
+      setError('Failed to load jobs. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
     fetchJobs();
   }, []);
+
+  async function handleEditJob(job: Job, data: JobFormValues): Promise<void> {
+    const payload = {
+      job_title: data.title,
+      company_name: data.company,
+      location: data.location || undefined,
+      current_stage: data.pipelineStage,
+      deadline: data.deadline || undefined,
+      is_priority: data.priorityFlag,
+    };
+    const res = await fetch(`/api/jobs/${job.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update job');
+    await fetchJobs();
+  }
+
+  async function handleDeleteJob(job: Job): Promise<void> {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${job.title}" at ${job.company}? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    const res = await fetch(`/api/jobs/${job.id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      alert('Failed to delete job. Please try again.');
+      return;
+    }
+    await fetchJobs();
+  }
 
   if (loading) {
     return (
@@ -124,12 +159,25 @@ export function BoardContent() {
           <p className="text-lg font-semibold text-gray-900">No jobs yet</p>
           <p className="text-sm text-gray-500">Add your first job to get started.</p>
         </div>
-        <Button
-          disabled
-          className="bg-[#2E75B6] text-white hover:bg-[#1F4E79] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Add Job
-        </Button>
+        <JobFormModal
+          onSubmit={async (data) => {
+            const payload = {
+              job_title: data.title,
+              company_name: data.company,
+              location: data.location || undefined,
+              current_stage: data.pipelineStage,
+              deadline: data.deadline || undefined,
+              is_priority: data.priorityFlag,
+            };
+            const res = await fetch('/api/jobs', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+            if (!res.ok) throw new Error('Failed to create job');
+            await fetchJobs();
+          }}
+        />
       </div>
     );
   }
@@ -151,6 +199,7 @@ export function BoardContent() {
             <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 lg:table-cell">
               Deadline
             </th>
+            <th className="px-4 py-3 text-right font-semibold text-gray-600">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">
@@ -190,23 +239,38 @@ export function BoardContent() {
                   </Badge>
                 </td>
                 <td className="hidden px-4 py-3 text-gray-500 lg:table-cell">
-                  {job.lastActivityDate}
+                  {formatTimestamp(job.lastActivityDate)}
                 </td>
                 <td className="hidden px-4 py-3 lg:table-cell">
                   {job.deadline ? (
                     <span
                       className={cn(
-                        'text-xs font-medium',
+                        'text-sm font-medium',
                         deadlineOverdue && 'text-red-600',
                         deadlineSoon && !deadlineOverdue && 'text-amber-600',
                         !deadlineSoon && !deadlineOverdue && 'text-gray-400',
                       )}
                     >
-                      {job.deadline}
+                      {formatDateOnly(job.deadline)}
                     </span>
                   ) : (
                     <span className="text-gray-300">—</span>
                   )}
+                </td>
+                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <JobFormModal
+                    job={{
+                      id: job.id,
+                      title: job.title,
+                      company: job.company,
+                      location: job.location,
+                      pipelineStage: job.pipelineStage,
+                      deadline: job.deadline ? job.deadline.split('T')[0] : undefined,
+                      priorityFlag: job.priorityFlag,
+                    }}
+                    onSubmit={(data) => handleEditJob(job, data)}
+                    onDelete={() => handleDeleteJob(job)}
+                  />
                 </td>
               </tr>
             );

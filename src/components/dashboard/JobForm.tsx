@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -81,13 +81,15 @@ export interface JobFormProps {
   onSubmit: (data: JobFormValues) => Promise<void> | void;
   /** Called when the user cancels the form. */
   onCancel: () => void;
+  /** Called when the user wants to delete the job (edit mode only). */
+  onDelete?: () => Promise<void> | void;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function JobForm({ job, onSubmit, onCancel }: JobFormProps) {
+export function JobForm({ job, onSubmit, onCancel, onDelete }: JobFormProps) {
   const isEditMode = Boolean(job);
 
   const form = useForm<JobFormValues>({
@@ -246,14 +248,30 @@ export function JobForm({ job, onSubmit, onCancel }: JobFormProps) {
         />
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 pt-2">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditMode ? 'Save Changes' : 'Add Job'}
-          </Button>
+        <div className="flex items-center justify-between pt-2">
+          <div>
+            {isEditMode && onDelete && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onDelete}
+                disabled={isSubmitting}
+                className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                aria-label="Delete job"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isEditMode ? 'Save Changes' : 'Add Job'}
+            </Button>
+          </div>
         </div>
       </form>
     </Form>

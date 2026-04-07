@@ -6,7 +6,23 @@ import { type JobFormValues } from './JobForm';
 
 export function DashboardHeader() {
   async function handleAddJob(data: JobFormValues): Promise<void> {
-    console.log('New job data:', data);
+    const payload = {
+      job_title: data.title,
+      company_name: data.company,
+      location: data.location || undefined,
+      current_stage: data.pipelineStage,
+      deadline: data.deadline || undefined,
+      is_priority: data.priorityFlag,
+    };
+
+    const res = await fetch('/api/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) throw new Error('Failed to create job');
+    window.location.reload();
   }
 
   return (
