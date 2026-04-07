@@ -58,10 +58,14 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     if (authError || !user) return apiError('AUTH_REQUIRED', 401);
 
     const { error } = await deleteJob(id, user.id);
-    if (error) return apiError('INTERNAL_ERROR', 500);
+    if (error) {
+      console.error('[DELETE /api/jobs/[id]] Supabase error:', error);
+      return apiError('INTERNAL_ERROR', 500);
+    }
 
-    return apiSuccess(null, 204);
-  } catch {
+    return apiSuccess({ deleted: true });
+  } catch (err) {
+    console.error('[DELETE /api/jobs/[id]] Unexpected error:', err);
     return apiError('INTERNAL_ERROR', 500);
   }
 }
