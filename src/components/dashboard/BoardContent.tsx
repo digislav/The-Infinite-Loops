@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BriefcaseIcon, Pencil } from 'lucide-react';
+import { BriefcaseIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Flag } from 'lucide-react';
@@ -11,6 +11,7 @@ import type { Job, PipelineStage, JobRecord } from '@/types/job.types';
 import { toUIJob } from '@/types/job.types';
 import { JobFormModal } from './JobFormModal';
 import type { JobFormValues } from './JobForm';
+import type { JobFilters } from './BoardControls';
 
 const stageStyles: Record<PipelineStage, string> = {
   Interested: 'bg-indigo-100 text-indigo-700',
@@ -32,7 +33,12 @@ function isDeadlineOverdue(deadline?: string): boolean {
   return new Date(deadline).getTime() < Date.now();
 }
 
-export function BoardContent() {
+interface BoardContentProps {
+  filters: JobFilters;
+  onLocationsReady: (locations: string[]) => void;
+}
+
+export function BoardContent({ filters, onLocationsReady }: BoardContentProps) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +49,12 @@ export function BoardContent() {
       if (!res.ok) throw new Error('Failed to fetch jobs');
       const json = await res.json();
       const records: JobRecord[] = json.data ?? [];
-      setJobs(records.map(toUIJob));
+      const uiJobs = records.map(toUIJob);
+      setJobs(uiJobs);
+      const uniqueLocations = [
+        ...new Set(uiJobs.map((j) => j.location).filter(Boolean)),
+      ] as string[];
+      onLocationsReady(uniqueLocations);
     } catch {
       setError('Failed to load jobs. Please try again.');
     } finally {
@@ -85,6 +96,16 @@ export function BoardContent() {
     }
     await fetchJobs();
   }
+
+  const filteredJobs = jobs.filter((job) => {
+    if (filters.stage !== 'all' && job.pipelineStage !== filters.stage) return false;
+    if (filters.location !== 'all' && job.location !== filters.location) return false;
+    if (filters.deadline === 'soon' && !isDeadlineSoon(job.deadline)) return false;
+    if (filters.deadline === 'overdue' && !isDeadlineOverdue(job.deadline)) return false;
+    if (filters.deadline === 'none' && job.deadline) return false;
+    if (filters.priority === 'priority' && !job.priorityFlag) return false;
+    return true;
+  });
 
   if (loading) {
     return (
@@ -149,35 +170,43 @@ export function BoardContent() {
     );
   }
 
-  if (jobs.length === 0) {
+  if (filteredJobs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#D9E2F3]">
           <BriefcaseIcon className="h-8 w-8 text-[#2E75B6]" aria-hidden="true" />
         </div>
         <div className="flex flex-col gap-1">
-          <p className="text-lg font-semibold text-gray-900">No jobs yet</p>
-          <p className="text-sm text-gray-500">Add your first job to get started.</p>
+          <p className="text-lg font-semibold text-gray-900">
+            {jobs.length === 0 ? 'No jobs yet' : 'No jobs match your filters'}
+          </p>
+          <p className="text-sm text-gray-500">
+            {jobs.length === 0
+              ? 'Add your first job to get started.'
+              : 'Try adjusting or clearing your filters.'}
+          </p>
         </div>
-        <JobFormModal
-          onSubmit={async (data) => {
-            const payload = {
-              job_title: data.title,
-              company_name: data.company,
-              location: data.location || undefined,
-              current_stage: data.pipelineStage,
-              deadline: data.deadline || undefined,
-              is_priority: data.priorityFlag,
-            };
-            const res = await fetch('/api/jobs', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            });
-            if (!res.ok) throw new Error('Failed to create job');
-            await fetchJobs();
-          }}
-        />
+        {jobs.length === 0 && (
+          <JobFormModal
+            onSubmit={async (data) => {
+              const payload = {
+                job_title: data.title,
+                company_name: data.company,
+                location: data.location || undefined,
+                current_stage: data.pipelineStage,
+                deadline: data.deadline || undefined,
+                is_priority: data.priorityFlag,
+              };
+              const res = await fetch('/api/jobs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+              });
+              if (!res.ok) throw new Error('Failed to create job');
+              await fetchJobs();
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -203,7 +232,7 @@ export function BoardContent() {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">
-          {jobs.map((job) => {
+          {filteredJobs.map((job) => {
             const deadlineSoon = isDeadlineSoon(job.deadline);
             const deadlineOverdue = isDeadlineOverdue(job.deadline);
             return (
