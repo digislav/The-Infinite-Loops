@@ -12,6 +12,8 @@ import { toUIJob } from '@/types/job.types';
 import { JobFormModal } from './JobFormModal';
 import type { JobFormValues } from './JobForm';
 import type { JobFilters } from './BoardControls';
+import { useJobDetail } from '@/hooks/useJobDetail';
+import { JobDetailPanel } from './JobDetailPanel';
 
 const stageStyles: Record<PipelineStage, string> = {
   Interested: 'bg-indigo-100 text-indigo-700',
@@ -42,6 +44,15 @@ export function BoardContent({ filters, onLocationsReady }: BoardContentProps) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const {
+    selectedJob,
+    isOpen,
+    isLoading: isDetailLoading,
+    error: detailError,
+    openJob,
+    closeJob,
+  } = useJobDetail();
 
   async function fetchJobs() {
     try {
@@ -212,100 +223,109 @@ export function BoardContent({ filters, onLocationsReady }: BoardContentProps) {
   }
 
   return (
-    <div className="w-full overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full text-sm">
-        <thead className="border-b border-gray-200 bg-gray-50">
-          <tr>
-            <th className="px-4 py-3 text-left font-semibold text-gray-600">Job Title</th>
-            <th className="px-4 py-3 text-left font-semibold text-gray-600">Company</th>
-            <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 md:table-cell">
-              Location
-            </th>
-            <th className="px-4 py-3 text-left font-semibold text-gray-600">Stage</th>
-            <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 lg:table-cell">
-              Last Activity
-            </th>
-            <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 lg:table-cell">
-              Deadline
-            </th>
-            <th className="px-4 py-3 text-right font-semibold text-gray-600">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100 bg-white">
-          {filteredJobs.map((job) => {
-            const deadlineSoon = isDeadlineSoon(job.deadline);
-            const deadlineOverdue = isDeadlineOverdue(job.deadline);
-            return (
-              <tr
-                key={job.id}
-                className="cursor-pointer transition-colors duration-150 hover:bg-blue-50"
-                tabIndex={0}
-                role="button"
-                aria-label={`${job.title} at ${job.company}`}
-                onClick={() => console.log('Job clicked:', job.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') console.log('Job clicked:', job.id);
-                }}
-              >
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-900">{job.title}</span>
-                    {job.priorityFlag && (
-                      <Flag size={13} className="shrink-0 text-amber-500" aria-label="Priority" />
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-gray-600">{job.company}</td>
-                <td className="hidden px-4 py-3 text-gray-500 md:table-cell">{job.location}</td>
-                <td className="px-4 py-3">
-                  <Badge
-                    className={cn(
-                      'rounded-full border-0 px-2 py-0.5 text-xs font-medium',
-                      stageStyles[job.pipelineStage],
-                    )}
-                  >
-                    {job.pipelineStage}
-                  </Badge>
-                </td>
-                <td className="hidden px-4 py-3 text-gray-500 lg:table-cell">
-                  {formatTimestamp(job.lastActivityDate)}
-                </td>
-                <td className="hidden px-4 py-3 lg:table-cell">
-                  {job.deadline ? (
-                    <span
+    <>
+      <div className="w-full overflow-x-auto rounded-lg border border-gray-200">
+        <table className="w-full text-sm">
+          <thead className="border-b border-gray-200 bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">Job Title</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">Company</th>
+              <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 md:table-cell">
+                Location
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">Stage</th>
+              <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 lg:table-cell">
+                Last Activity
+              </th>
+              <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 lg:table-cell">
+                Deadline
+              </th>
+              <th className="px-4 py-3 text-right font-semibold text-gray-600">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {filteredJobs.map((job) => {
+              const deadlineSoon = isDeadlineSoon(job.deadline);
+              const deadlineOverdue = isDeadlineOverdue(job.deadline);
+              return (
+                <tr
+                  key={job.id}
+                  className="cursor-pointer transition-colors duration-150 hover:bg-blue-50"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`${job.title} at ${job.company}`}
+                  onClick={() => openJob(job.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') openJob(job.id);
+                  }}
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">{job.title}</span>
+                      {job.priorityFlag && (
+                        <Flag size={13} className="shrink-0 text-amber-500" aria-label="Priority" />
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{job.company}</td>
+                  <td className="hidden px-4 py-3 text-gray-500 md:table-cell">{job.location}</td>
+                  <td className="px-4 py-3">
+                    <Badge
                       className={cn(
-                        'text-sm font-medium',
-                        deadlineOverdue && 'text-red-600',
-                        deadlineSoon && !deadlineOverdue && 'text-amber-600',
-                        !deadlineSoon && !deadlineOverdue && 'text-gray-400',
+                        'rounded-full border-0 px-2 py-0.5 text-xs font-medium',
+                        stageStyles[job.pipelineStage],
                       )}
                     >
-                      {formatDateOnly(job.deadline)}
-                    </span>
-                  ) : (
-                    <span className="text-gray-300">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                  <JobFormModal
-                    job={{
-                      id: job.id,
-                      title: job.title,
-                      company: job.company,
-                      location: job.location,
-                      pipelineStage: job.pipelineStage,
-                      deadline: job.deadline ? job.deadline.split('T')[0] : undefined,
-                      priorityFlag: job.priorityFlag,
-                    }}
-                    onSubmit={(data) => handleEditJob(job, data)}
-                    onDelete={() => handleDeleteJob(job)}
-                  />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                      {job.pipelineStage}
+                    </Badge>
+                  </td>
+                  <td className="hidden px-4 py-3 text-gray-500 lg:table-cell">
+                    {formatTimestamp(job.lastActivityDate)}
+                  </td>
+                  <td className="hidden px-4 py-3 lg:table-cell">
+                    {job.deadline ? (
+                      <span
+                        className={cn(
+                          'text-sm font-medium',
+                          deadlineOverdue && 'text-red-600',
+                          deadlineSoon && !deadlineOverdue && 'text-amber-600',
+                          !deadlineSoon && !deadlineOverdue && 'text-gray-400',
+                        )}
+                      >
+                        {formatDateOnly(job.deadline)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                    <JobFormModal
+                      job={{
+                        id: job.id,
+                        title: job.title,
+                        company: job.company,
+                        location: job.location,
+                        pipelineStage: job.pipelineStage,
+                        deadline: job.deadline ? job.deadline.split('T')[0] : undefined,
+                        priorityFlag: job.priorityFlag,
+                      }}
+                      onSubmit={(data) => handleEditJob(job, data)}
+                      onDelete={() => handleDeleteJob(job)}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <JobDetailPanel
+        job={selectedJob}
+        isOpen={isOpen}
+        isLoading={isDetailLoading}
+        error={detailError}
+        onClose={closeJob}
+      />
+    </>
   );
 }
