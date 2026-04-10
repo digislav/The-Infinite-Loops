@@ -1,55 +1,123 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '../supabase/server'
 
 export type Job = {
-  id?: string;
-  user_id: string;
-  job_title: string;
-  company_name: string;
-  location?: string;
-  current_stage?: 'Interested' | 'Applied' | 'Interview' | 'Offer' | 'Rejected' | 'Archived';
-  last_activity_date?: string;
-  deadline?: string;
-  is_priority?: boolean;
-  description?: string;
-  compensation_notes?: string;
-  application_date?: string;
-  recruiter_notes?: string;
-  custom_notes?: string;
-  created_at?: string;
-  updated_at?: string;
-};
+  id?: string
+  user_id: string
+  job_title: string
+  company_name: string
+  location?: string
+  current_stage?: 'Interested' | 'Applied' | 'Interview' | 'Offer' | 'Rejected' | 'Archived'
+  last_activity_date?: string
+  deadline?: string
+  is_priority?: boolean
+  description?: string
+  compensation_notes?: string
+  application_date?: string
+  recruiter_notes?: string
+  custom_notes?: string
+  created_at?: string
+  updated_at?: string
+}
 
-export async function getJobs(userId: string, filters?: { status?: string; deadline?: string }) {
-  const supabase = await createClient();
-  let query = supabase.from('jobs').select('*').eq('user_id', userId);
+// 1. GET ALL
+export async function getJobs(userId: string, filters?: { status?: string, deadline?: string }) {
+  const supabase = await createClient(); // ADDED AWAIT
+  let query = supabase
+    .from('jobs')
+    .select('*')
+    .eq('user_id', userId);
 
   if (filters?.status) {
     query = query.eq('current_stage', filters.status);
   }
-
+  
   if (filters?.deadline) {
     query = query.lte('deadline', filters.deadline);
   }
 
-  return query.order('created_at', { ascending: false });
+  return await query.order('created_at', { ascending: false });
 }
 
+// 2. GET SINGLE
 export async function getJobById(id: string, userId: string) {
-  const supabase = await createClient();
-  return supabase.from('jobs').select('*').eq('id', id).eq('user_id', userId).single();
+  const supabase = await createClient(); // ADDED AWAIT
+  return await supabase
+    .from('jobs')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', userId) 
+    .single();
 }
 
-export async function createJob(job: Omit<Job, 'id' | 'created_at' | 'updated_at'>) {
-  const supabase = await createClient();
-  return supabase.from('jobs').insert(job).select().single();
+// 3. CREATE
+export async function createJob(userId: string, jobData: Partial<Job>) {
+  const supabase = await createClient(); // ADDED AWAIT
+
+  const { data: newJob, error: jobError } = await supabase
+    .from('jobs')
+    .insert({ 
+      ...jobData, 
+      user_id: userId,
+      current_stage: jobData.current_stage || 'Interested'
+    })
+    .select()
+    .single();
+
+  if (jobError) throw jobError;
+
+  if (newJob) {
+    try {
+      await supabase
+        .from('job_activities')
+        .insert({
+          job_id: newJob.id,
+          activity_type: 'STAGE_CHANGE',
+          timeline_event_type: newJob.current_stage,
+          notes: 'Job entry created',
+          activity_date: new Date().toISOString()
+        });
+    } catch (err) {
+      console.error("Non-fatal: Activity creation failed:", err);
+    }
+  }
+    
+  return newJob;
 }
 
+// 4. UPDATE
 export async function updateJob(id: string, userId: string, updates: Partial<Job>) {
-  const supabase = await createClient();
-  return supabase.from('jobs').update(updates).eq('id', id).eq('user_id', userId).select().single();
+  const supabase = await createClient(); // ADDED AWAIT
+
+  if (updates.current_stage) {
+    try {
+      await supabase.from('job_activities').insert({
+        job_id: id,
+        activity_type: 'STAGE_CHANGE',
+        timeline_event_type: updates.current_stage,
+        notes: `Transitioned to ${updates.current_stage}`,
+        activity_date: new Date().toISOString()
+      });
+      updates.last_activity_date = new Date().toISOString();
+    } catch (err) {
+      console.error("Non-fatal: Update activity failed:", err);
+    }
+  }
+
+  return await supabase
+    .from('jobs')
+    .update(updates)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .single();
 }
 
+// 5. DELETE
 export async function deleteJob(id: string, userId: string) {
-  const supabase = await createClient();
-  return supabase.from('jobs').delete().eq('id', id).eq('user_id', userId);
+  const supabase = await createClient(); // ADDED AWAIT
+  return await supabase
+    .from('jobs')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
 }
