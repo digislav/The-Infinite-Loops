@@ -38,13 +38,27 @@ function isDeadlineOverdue(deadline?: string): boolean {
 interface BoardContentProps {
   filters: JobFilters;
   onLocationsReady: (locations: string[]) => void;
+  searchQuery?: string;
 }
 
-export function BoardContent({ filters, onLocationsReady }: BoardContentProps) {
+export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: BoardContentProps) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Apply both filter dropdown selections and free-text search.
+  // Search matches case-insensitively against title, company, and location.
+  const q = searchQuery.trim().toLowerCase();
+  const filteredJobs = jobs.filter((job) => {
+    if (filters.stage !== 'all' && job.pipelineStage !== filters.stage) return false;
+    if (filters.location !== 'all' && job.location !== filters.location) return false;
+    if (filters.deadline === 'soon' && !isDeadlineSoon(job.deadline)) return false;
+    if (filters.deadline === 'overdue' && !isDeadlineOverdue(job.deadline)) return false;
+    if (filters.deadline === 'none' && job.deadline) return false;
+    if (filters.priority === 'priority' && !job.priorityFlag) return false;
+    if (q && !job.title.toLowerCase().includes(q) && !job.company.toLowerCase().includes(q) && !(job.location ?? '').toLowerCase().includes(q)) return false;
+    return true;
+  });
   const {
     selectedJob,
     isOpen,
@@ -108,15 +122,6 @@ export function BoardContent({ filters, onLocationsReady }: BoardContentProps) {
     await fetchJobs();
   }
 
-  const filteredJobs = jobs.filter((job) => {
-    if (filters.stage !== 'all' && job.pipelineStage !== filters.stage) return false;
-    if (filters.location !== 'all' && job.location !== filters.location) return false;
-    if (filters.deadline === 'soon' && !isDeadlineSoon(job.deadline)) return false;
-    if (filters.deadline === 'overdue' && !isDeadlineOverdue(job.deadline)) return false;
-    if (filters.deadline === 'none' && job.deadline) return false;
-    if (filters.priority === 'priority' && !job.priorityFlag) return false;
-    return true;
-  });
 
   if (loading) {
     return (
