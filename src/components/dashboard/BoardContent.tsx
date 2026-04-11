@@ -79,23 +79,6 @@ export function BoardContent({ filters, onLocationsReady }: BoardContentProps) {
     fetchJobs();
   }, []);
 
-  async function handleEditJob(job: Job, data: JobFormValues): Promise<void> {
-    const payload = {
-      job_title: data.title,
-      company_name: data.company,
-      location: data.location || undefined,
-      current_stage: data.pipelineStage,
-      deadline: data.deadline || undefined,
-      is_priority: data.priorityFlag,
-    };
-    const res = await fetch(`/api/jobs/${job.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error('Failed to update job');
-    await fetchJobs();
-  }
 
   async function handleDeleteJob(job: Job): Promise<void> {
     const confirmed = window.confirm(
@@ -301,19 +284,14 @@ export function BoardContent({ filters, onLocationsReady }: BoardContentProps) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                    <JobFormModal
-                      job={{
-                        id: job.id,
-                        title: job.title,
-                        company: job.company,
-                        location: job.location,
-                        pipelineStage: job.pipelineStage,
-                        deadline: job.deadline ? job.deadline.split('T')[0] : undefined,
-                        priorityFlag: job.priorityFlag,
-                      }}
-                      onSubmit={(data) => handleEditJob(job, data)}
-                      onDelete={() => handleDeleteJob(job)}
-                    />
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => handleDeleteJob(job)}
+                      className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+                      aria-label="Delete job"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    </Button>
                   </td>
                 </tr>
               );
