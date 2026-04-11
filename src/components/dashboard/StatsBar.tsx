@@ -10,6 +10,7 @@ type StageCounts = {
   Interview: number;
   Offer: number;
   Rejected: number;
+  Ghosted: number;
   Archived: number;
 };
 
@@ -21,6 +22,7 @@ export function StatsBar() {
     Interview: 0,
     Offer: 0,
     Rejected: 0,
+    Ghosted: 0,
     Archived: 0,
   });
 
@@ -39,6 +41,7 @@ export function StatsBar() {
           Interview: 0,
           Offer: 0,
           Rejected: 0,
+          Ghosted: 0,
           Archived: 0,
         };
 

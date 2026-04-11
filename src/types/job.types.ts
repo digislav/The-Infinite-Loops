@@ -4,6 +4,7 @@ export type PipelineStage =
   | 'Interview'
   | 'Offer'
   | 'Rejected'
+  | 'Ghosted'
   | 'Archived';
 
 // DB shape — matches the jobs table columns exactly.
