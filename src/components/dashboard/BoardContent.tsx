@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Flag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
-import type { Job, PipelineStage, JobRecord } from '@/types/job.types';
+import type { Job, PipelineStage } from '@/types/job.types';
 import { toUIJob } from '@/types/job.types';
 import { JobFormModal } from './JobFormModal';
 import type { JobFormValues } from './JobForm';
@@ -38,13 +38,13 @@ function isDeadlineOverdue(deadline?: string): boolean {
 interface BoardContentProps {
   filters: JobFilters;
   onLocationsReady: (locations: string[]) => void;
+  jobs: Job[];
+  loading: boolean;
+  error: string | null;
+  fetchJobs: () => Promise<void>;
 }
 
-export function BoardContent({ filters, onLocationsReady }: BoardContentProps) {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+export function BoardContent({ filters, onLocationsReady, jobs, loading, error, fetchJobs }: BoardContentProps) {
   const {
     selectedJob,
     isOpen,
@@ -52,30 +52,8 @@ export function BoardContent({ filters, onLocationsReady }: BoardContentProps) {
     error: detailError,
     openJob,
     closeJob,
+    updateJobState,
   } = useJobDetail();
-
-  async function fetchJobs() {
-    try {
-      const res = await fetch('/api/jobs');
-      if (!res.ok) throw new Error('Failed to fetch jobs');
-      const json = await res.json();
-      const records: JobRecord[] = json.data ?? [];
-      const uiJobs = records.map(toUIJob);
-      setJobs(uiJobs);
-      const uniqueLocations = [
-        ...new Set(uiJobs.map((j) => j.location).filter(Boolean)),
-      ] as string[];
-      onLocationsReady(uniqueLocations);
-    } catch {
-      setError('Failed to load jobs. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchJobs();
-  }, []);
 
   async function handleEditJob(job: Job, data: JobFormValues): Promise<void> {
     const payload = {
@@ -325,6 +303,10 @@ export function BoardContent({ filters, onLocationsReady }: BoardContentProps) {
         isLoading={isDetailLoading}
         error={detailError}
         onClose={closeJob}
+        onJobUpdated={(updates) => {
+          updateJobState(updates);
+          void fetchJobs();
+        }}
       />
     </>
   );
