@@ -215,7 +215,7 @@ export function InterviewSection({ jobId }: InterviewSectionProps) {
             <Label htmlFor="interview-round" className="text-xs text-gray-500">
               Round Type <span className="text-red-500">*</span>
             </Label>
-            <Select value={round} onValueChange={(val: string) => setRound(val)}>
+            <Select value={round} onValueChange={(val) => setRound(val)}>
               <SelectTrigger id="interview-round" className="h-8 text-xs">
                 <SelectValue placeholder="Select round type" />
               </SelectTrigger>
