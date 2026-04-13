@@ -26,7 +26,9 @@ export type Job = {
   updated_at?: string;
 };
 
-// New type for interviews (S2-011)
+// Type for all activity timeline events.
+// Used by S2-009 (stage transitions), S2-010 (timeline display),
+// and S2-011 (interview tracking).
 export type JobActivity = {
   id?: string;
   job_id: string;
@@ -79,6 +81,8 @@ export async function createJob(userId: string, jobData: Partial<Job>) {
 
   if (jobError) throw jobError;
 
+  // Record the initial stage as the first activity event.
+  // This gives the timeline a starting point for every new job.
   if (newJob) {
     try {
       await supabase.from('job_activities').insert({
@@ -100,6 +104,10 @@ export async function createJob(userId: string, jobData: Partial<Job>) {
 export async function updateJob(id: string, userId: string, updates: Partial<Job>) {
   const supabase = await createClient();
 
+  // Record a STAGE_CHANGE activity only when the stage actually changed.
+  // Per S2-009 — stage transitions are recorded with timestamps.
+  // We only record this when current_stage is in the payload, which
+  // JobDetailPanel.tsx only includes when the stage actually changed.
   if (updates.current_stage) {
     try {
       await supabase.from('job_activities').insert({
@@ -112,6 +120,28 @@ export async function updateJob(id: string, userId: string, updates: Partial<Job
       updates.last_activity_date = new Date().toISOString();
     } catch (err) {
       console.error('Non-fatal: Update activity failed:', err);
+    }
+  }
+
+  // Record a NOTE_ADDED activity when any note or description field is updated.
+  // This makes note changes visible in the activity timeline per S2-010.
+  // We check for undefined rather than falsy so that clearing a note
+  // (empty string) also gets recorded as a note update.
+  if (
+    updates.recruiter_notes !== undefined ||
+    updates.custom_notes !== undefined ||
+    updates.description !== undefined ||
+    updates.compensation_notes !== undefined
+  ) {
+    try {
+      await supabase.from('job_activities').insert({
+        job_id: id,
+        activity_type: 'NOTE_ADDED',
+        notes: 'Notes updated',
+        activity_date: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Non-fatal: Note activity creation failed:', err);
     }
   }
 
@@ -131,6 +161,7 @@ export async function deleteJob(id: string, userId: string) {
 }
 
 // GET interviews — fetches only INTERVIEW_SCHEDULED events for a job.
+// Used by the interviews route handler (S2-011).
 export async function getInterviewsByJob(jobId: string) {
   const supabase = await createClient();
   return await supabase
@@ -142,6 +173,8 @@ export async function getInterviewsByJob(jobId: string) {
 }
 
 // POST interview — saves a new interview event for a job.
+// Also automatically appears in the activity timeline since it uses
+// the INTERVIEW_SCHEDULED activity type per S2-010.
 export async function addInterview(userId: string, jobId: string, data: Partial<JobActivity>) {
   const supabase = await createClient();
   return await supabase
