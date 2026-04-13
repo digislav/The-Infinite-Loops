@@ -49,11 +49,16 @@ export async function POST(req: Request) {
     // This prevents a user from creating a job owned by someone else.
     const { user_id: _stripped, ...safeBody } = body;
 
-    const { data, error } = await createJob({ ...safeBody, user_id: user.id });
-    if (error) return apiError('INTERNAL_ERROR', 500);
-
-    // 201 Created — per S1-001 §7.2 successful POST returns 201.
-    return apiSuccess(data, 201);
+    // createJob takes userId and jobData as separate arguments —
+    // matching the signature in the updated jobServices.ts.
+    // user.id comes from the verified session, never the request body.
+    try {
+      const newJob = await createJob(user.id, safeBody);
+      // 201 Created — per S1-001 §7.2 successful POST returns 201.
+      return apiSuccess(newJob, 201);
+    } catch {
+      return apiError('INTERNAL_ERROR', 500);
+    }
   } catch {
     return apiError('INTERNAL_ERROR', 500);
   }
