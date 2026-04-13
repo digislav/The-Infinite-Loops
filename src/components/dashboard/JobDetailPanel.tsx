@@ -1,5 +1,6 @@
 'use client';
 
+import { JobActivityTimeline } from './JobActivityTimeline';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Flag, MapPin, Building2, CalendarClock, FileText, Pencil, Save } from 'lucide-react';
+import { Flag, MapPin, Building2, CalendarClock, Pencil, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDateOnly } from '@/lib/utils/dateFormatters';
 import type { JobDetail, PipelineStage } from '@/types/job.types';
@@ -466,11 +467,12 @@ export function JobDetailPanel({
               )
             )}
 
-            <div className="mt-5 flex flex-col gap-3">
-              <div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 p-4">
-                <FileText size={15} className="text-gray-300" aria-hidden={true} />
-                <span className="text-sm text-gray-400"></span>
-              </div>
+            {/* S2-010: Activity Timeline — shows all stage changes, interviews,
+    and notes for this job in reverse chronological order.
+    The timeline component fetches from the protected API route which
+    enforces ownership server-side per S1-003 §4.3. */}
+            <div className="mt-5">
+              <JobActivityTimeline jobId={job.id} />
             </div>
           </>
         )}
