@@ -27,6 +27,8 @@ interface UseJobDetailReturn {
   openJob: (jobId: string) => void;
   // Call when the panel is dismissed — resets all state.
   closeJob: () => void;
+  // Optimistically update the UI after a save.
+  updateJobState: (updates: Partial<JobDetail>) => void;
 }
 
 export function useJobDetail(): UseJobDetailReturn {
@@ -76,12 +78,18 @@ export function useJobDetail(): UseJobDetailReturn {
     }
   }, []);
 
-  // closeJob — called when the panel X button is clicked or the
+// closeJob — called when the panel X button is clicked or the
   // overlay is dismissed. Resets all state so the next open starts fresh.
   const closeJob = useCallback(() => {
     setIsOpen(false);
     setSelectedJob(null);
     setError(null);
+  }, []);
+
+  // updateJobState — allows the UI to optimistically update the job state
+  // after a successful backend save, averting an awkward loading spinner reload.
+  const updateJobState = useCallback((updates: Partial<JobDetail>) => {
+    setSelectedJob((prev) => (prev ? { ...prev, ...updates } : null));
   }, []);
 
   return {
@@ -91,5 +99,6 @@ export function useJobDetail(): UseJobDetailReturn {
     error,
     openJob,
     closeJob,
+    updateJobState,
   };
 }

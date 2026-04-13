@@ -35,6 +35,7 @@ export type PipelineStage =
   | 'Interview'
   | 'Offer'
   | 'Rejected'
+  | 'Ghosted'
   | 'Archived';
 
 const PIPELINE_STAGES: PipelineStage[] = [
@@ -43,6 +44,7 @@ const PIPELINE_STAGES: PipelineStage[] = [
   'Interview',
   'Offer',
   'Rejected',
+  'Ghosted',
   'Archived',
 ];
 
@@ -56,6 +58,7 @@ export const jobFormSchema = z.object({
     'Interview',
     'Offer',
     'Rejected',
+    'Ghosted',
     'Archived',
   ] as const),
   deadline: z.string().optional(),
@@ -190,7 +193,7 @@ export function JobForm({ job, onSubmit, onCancel, onDelete }: JobFormProps) {
               </FormLabel>
               <Select
                 onValueChange={field.onChange}
-                defaultValue={field.value}
+                value={field.value}
                 disabled={isSubmitting}
               >
                 <FormControl>

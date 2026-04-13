@@ -6,7 +6,7 @@ export type Job = {
   job_title: string
   company_name: string
   location?: string
-  current_stage?: 'Interested' | 'Applied' | 'Interview' | 'Offer' | 'Rejected' | 'Archived'
+  current_stage?: 'Interested' | 'Applied' | 'Interview' | 'Offer' | 'Rejected' | 'Ghosted' | 'Archived'
   last_activity_date?: string
   deadline?: string
   is_priority?: boolean

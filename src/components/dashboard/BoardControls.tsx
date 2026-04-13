@@ -27,6 +27,7 @@ const STAGES: PipelineStage[] = [
   'Interview',
   'Offer',
   'Rejected',
+  'Ghosted',
   'Archived',
 ];
 

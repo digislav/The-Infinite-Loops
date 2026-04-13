@@ -7,10 +7,16 @@
 // Sheet is not installed in this project so Dialog is used here,
 // consistent with how JobFormModal.tsx works.
 
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Flag, MapPin, Building2, CalendarClock, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Flag, MapPin, Building2, CalendarClock, FileText, Pencil, Save, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDateOnly } from '@/lib/utils/dateFormatters';
 import type { JobDetail, PipelineStage } from '@/types/job.types';
@@ -24,8 +30,19 @@ const stageStyles: Record<PipelineStage, string> = {
   Interview: 'bg-amber-100 text-amber-700',
   Offer: 'bg-emerald-100 text-emerald-700',
   Rejected: 'bg-red-100 text-red-700',
+  Ghosted: 'bg-slate-200 text-slate-700',
   Archived: 'bg-gray-100 text-gray-500',
 };
+
+const PIPELINE_STAGES: PipelineStage[] = [
+  'Interested',
+  'Applied',
+  'Interview',
+  'Offer',
+  'Rejected',
+  'Ghosted',
+  'Archived',
+];
 
 // Deadline urgency helpers — same logic as JobCard.tsx and BoardContent.tsx.
 // Kept identical so urgency cues behave consistently everywhere per S1-002 §12.1.
@@ -52,9 +69,86 @@ interface JobDetailPanelProps {
   error: string | null;
   // Called when the user closes the dialog.
   onClose: () => void;
+  // Called when the job is successfully updated inside the panel.
+  // We pass up the new fields so the parent can optimistically apply them.
+  onJobUpdated?: (updates: Partial<JobDetail>) => void;
 }
 
-export function JobDetailPanel({ job, isOpen, isLoading, error, onClose }: JobDetailPanelProps) {
+export function JobDetailPanel({ job, isOpen, isLoading, error, onClose, onJobUpdated }: JobDetailPanelProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Form state
+  const [title, setTitle] = useState('');
+  const [company, setCompany] = useState('');
+  const [location, setLocation] = useState('');
+  const [pipelineStage, setPipelineStage] = useState<PipelineStage>('Interested');
+  const [priorityFlag, setPriorityFlag] = useState(false);
+  
+  const [deadlineStr, setDeadlineStr] = useState('');
+  const [recruiterNotes, setRecruiterNotes] = useState('');
+  const [customNotes, setCustomNotes] = useState('');
+
+  // Sync state when entering edit mode or when job changes
+  useEffect(() => {
+    if (job) {
+      setTitle(job.title);
+      setCompany(job.company);
+      setLocation(job.location);
+      setPipelineStage(job.pipelineStage);
+      setPriorityFlag(job.priorityFlag ?? false);
+      
+      setDeadlineStr(job.deadline ? job.deadline.split('T')[0] : '');
+      setRecruiterNotes(job.recruiterNotes ?? '');
+      setCustomNotes(job.customNotes ?? '');
+    }
+    if (!isOpen) {
+      setIsEditing(false); // Reset edit mode when dialog closes
+    }
+  }, [job, isOpen]);
+
+  async function handleSave() {
+    if (!job) return;
+    setIsSaving(true);
+    try {
+      const payload = {
+        job_title: title,
+        company_name: company,
+        location: location || undefined,
+        current_stage: pipelineStage,
+        is_priority: priorityFlag,
+        deadline: deadlineStr || undefined,
+        recruiter_notes: recruiterNotes || undefined,
+        custom_notes: customNotes || undefined,
+      };
+
+      const res = await fetch(`/api/jobs/${job.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error('Failed to update job detail');
+      
+      // Update the parent's state so the UI reflects the change instantly without re-fetching
+      onJobUpdated?.({
+        title,
+        company,
+        location,
+        pipelineStage,
+        priorityFlag,
+        deadline: deadlineStr ? new Date(deadlineStr).toISOString() : undefined,
+        recruiterNotes,
+        customNotes,
+      });
+      
+      setIsEditing(false);
+    } catch (err) {
+      alert('Failed to save changes. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
   const deadlineSoon = isDeadlineSoon(job?.deadline);
   const deadlineOverdue = isDeadlineOverdue(job?.deadline);
 
@@ -106,33 +200,101 @@ export function JobDetailPanel({ job, isOpen, isLoading, error, onClose }: JobDe
         {!isLoading && !error && job && (
           <>
             {/* Header — title, priority flag, stage badge */}
-            <DialogHeader className="mb-4">
-              <div className="flex items-start gap-2">
-                {/* Job title — most prominent element per S1-002 §4.3 */}
-                <DialogTitle className="text-xl leading-tight font-bold text-gray-900">
-                  {job.title}
-                </DialogTitle>
-                {/* Priority flag — only shown when set per S1-002 §4.3.
-                    aria-label makes it accessible per S1-002 §10.1. */}
-                {job.priorityFlag && (
-                  <Flag
-                    size={16}
-                    className="mt-1 shrink-0 text-amber-500"
-                    aria-label="Priority job"
-                  />
-                )}
+            <DialogHeader className="-mt-1.5 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-1 items-center gap-2 mr-4">
+                  {isEditing ? (
+                    <Input 
+                      value={title} 
+                      onChange={(e) => setTitle(e.target.value)} 
+                      className="text-xl font-bold h-9 w-full max-w-xs" 
+                      placeholder="Job Title"
+                    />
+                  ) : (
+                    <DialogTitle className="text-xl leading-tight font-bold text-gray-900">
+                      {job.title}
+                    </DialogTitle>
+                  )}
+                  
+                  {isEditing ? (
+                    <div className="flex items-center gap-1.5 ml-2">
+                      <Checkbox 
+                        id="edit-priority" 
+                        checked={priorityFlag} 
+                        onCheckedChange={(checked) => setPriorityFlag(!!checked)} 
+                      />
+                      <Label htmlFor="edit-priority" className="text-xs text-amber-600 font-medium cursor-pointer">Priority</Label>
+                    </div>
+                  ) : (
+                    job.priorityFlag && (
+                      <Flag
+                        size={16}
+                        className="shrink-0 text-amber-500"
+                        aria-label="Priority job"
+                      />
+                    )
+                  )}
+                </div>
+                
+                {/* Edit Toggle Buttons */}
+                <div className="flex items-center gap-2 pr-6">
+                  {isEditing ? (
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setIsEditing(false)} 
+                        disabled={isSaving}
+                        className="h-8 rounded-full px-3 text-xs font-medium text-gray-500 hover:text-gray-700"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={handleSave} 
+                        disabled={isSaving} 
+                        className="h-8 rounded-full bg-[#2E75B6] px-4 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#1F4E79] hover:shadow"
+                      >
+                        {isSaving ? 'Saving...' : <><Save size={14} className="mr-1.5" /> Save Changes</>}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setIsEditing(true)}
+                      className="h-8 rounded-full bg-blue-50 px-4 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-700"
+                    >
+                      <Pencil size={13} className="mr-1.5" /> Edit Details
+                    </Button>
+                  )}
+                </div>
               </div>
 
-              {/* Pipeline stage badge — colour-coded per S1-002 §4.5 and §5.5.
-                  Always uses the Badge component, never free-form colour. */}
-              <Badge
-                className={cn(
-                  'mt-1 w-fit rounded-full border-0 px-2 py-0.5 text-xs font-medium',
-                  stageStyles[job.pipelineStage],
-                )}
-              >
-                {job.pipelineStage}
-              </Badge>
+              {/* Pipeline stage badge */}
+              {isEditing ? (
+                <Select value={pipelineStage} onValueChange={(val) => setPipelineStage(val as PipelineStage)}>
+                  <SelectTrigger className="mt-1 h-7 w-[140px] text-xs">
+                    <SelectValue placeholder="Stage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PIPELINE_STAGES.map((s) => (
+                      <SelectItem key={s} value={s} className="text-xs">
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Badge
+                  className={cn(
+                    'mt-1 w-fit rounded-full border-0 px-2 py-0.5 text-xs font-medium',
+                    stageStyles[job.pipelineStage],
+                  )}
+                >
+                  {job.pipelineStage}
+                </Badge>
+              )}
             </DialogHeader>
 
             {/* CORE JOB INFO
@@ -140,18 +302,41 @@ export function JobDetailPanel({ job, isOpen, isLoading, error, onClose }: JobDe
                 Matches the required fields from S1-002 §4.3. */}
             <div className="flex flex-col gap-3 border-b border-gray-100 pb-5">
               {/* Company name */}
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                {/* aria-hidden on decorative icons per S1-002 §10.1 */}
-                <Building2 size={15} aria-hidden={true} />
-                <span>{job.company}</span>
-              </div>
-
-              {/* Location — only shown if present */}
-              {job.location && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <MapPin size={15} aria-hidden={true} />
-                  <span>{job.location}</span>
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <Building2 size={15} className="text-gray-400" aria-hidden={true} />
+                  <Input 
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    className="h-7 w-full sm:w-1/2 text-sm"
+                    placeholder="Company Name"
+                  />
                 </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Building2 size={15} aria-hidden={true} />
+                  <span>{job.company}</span>
+                </div>
+              )}
+
+              {/* Location — only shown if present or if editing */}
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <MapPin size={15} className="text-gray-400" aria-hidden={true} />
+                  <Input 
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="h-7 w-full sm:w-1/2 text-sm"
+                    placeholder="Location (e.g. Remote, NY)"
+                  />
+                </div>
+              ) : (
+                job.location && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <MapPin size={15} aria-hidden={true} />
+                    <span>{job.location}</span>
+                  </div>
+                )
               )}
 
               {/* Last activity date */}
@@ -162,10 +347,19 @@ export function JobDetailPanel({ job, isOpen, isLoading, error, onClose }: JobDe
                 </div>
               )}
 
-              {/* Deadline — colour changes based on urgency per S1-002 §4.3.
-                  Red if overdue, amber if within 3 days, gray otherwise.
-                  Same logic as JobCard.tsx and BoardContent.tsx. */}
-              {job.deadline && (
+              {/* Deadline */}
+              {isEditing ? (
+                <div className="flex flex-col gap-1.5 mt-2">
+                  <Label htmlFor="deadline" className="text-xs text-gray-500">Deadline</Label>
+                  <Input 
+                    id="deadline" 
+                    type="date" 
+                    value={deadlineStr} 
+                    onChange={(e) => setDeadlineStr(e.target.value)} 
+                    className="w-full sm:w-1/2" 
+                  />
+                </div>
+              ) : job.deadline ? (
                 <div
                   className={cn(
                     'text-sm font-medium',
@@ -178,7 +372,7 @@ export function JobDetailPanel({ job, isOpen, isLoading, error, onClose }: JobDe
                   {deadlineOverdue && ' (Overdue)'}
                   {deadlineSoon && !deadlineOverdue && ' (Soon)'}
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* DESCRIPTION — only rendered if the job has a description */}
@@ -189,25 +383,53 @@ export function JobDetailPanel({ job, isOpen, isLoading, error, onClose }: JobDe
               </div>
             )}
 
-            {/* NOTES — recruiter and custom notes, only shown if at least one is set */}
-            {(job.recruiterNotes || job.customNotes) && (
-              <div className="mt-5 flex flex-col gap-4 border-b border-gray-100 pb-5">
-                <h3 className="text-sm font-semibold text-gray-700">Notes</h3>
-
-                {job.recruiterNotes && (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-medium text-gray-500">Recruiter</span>
-                    <p className="text-sm text-gray-600">{job.recruiterNotes}</p>
-                  </div>
-                )}
-
-                {job.customNotes && (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-medium text-gray-500">Custom Notes</span>
-                    <p className="text-sm text-gray-600">{job.customNotes}</p>
-                  </div>
-                )}
+            {/* NOTES / EDIT MODE SECTION */}
+            {isEditing ? (
+              <div className="mt-5 flex flex-col gap-5 border-b border-gray-100 pb-5">
+                <h3 className="text-sm font-semibold text-gray-700">Edit Notes</h3>
+                
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="recruiterNotes" className="text-xs text-gray-500">Recruiter Notes</Label>
+                  <textarea
+                    id="recruiterNotes"
+                    value={recruiterNotes}
+                    onChange={(e) => setRecruiterNotes(e.target.value)}
+                    placeholder="Enter notes about the recruiter or contacts..."
+                    className="min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2E75B6]/50 focus:border-[#2E75B6]"
+                  />
+                </div>
+                
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="customNotes" className="text-xs text-gray-500">Custom Notes</Label>
+                  <textarea
+                    id="customNotes"
+                    value={customNotes}
+                    onChange={(e) => setCustomNotes(e.target.value)}
+                    placeholder="Enter any additional context or private notes..."
+                    className="min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2E75B6]/50 focus:border-[#2E75B6]"
+                  />
+                </div>
               </div>
+            ) : (
+              (job.recruiterNotes || job.customNotes) && (
+                <div className="mt-5 flex flex-col gap-4 border-b border-gray-100 pb-5">
+                  <h3 className="text-sm font-semibold text-gray-700">Notes</h3>
+
+                  {job.recruiterNotes && (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-medium text-gray-500">Recruiter</span>
+                      <p className="whitespace-pre-wrap text-sm text-gray-600">{job.recruiterNotes}</p>
+                    </div>
+                  )}
+
+                  {job.customNotes && (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-medium text-gray-500">Custom Notes</span>
+                      <p className="whitespace-pre-wrap text-sm text-gray-600">{job.customNotes}</p>
+                    </div>
+                  )}
+                </div>
+              )
             )}
 
             {/* SPRINT 2 PLACEHOLDER SECTIONS

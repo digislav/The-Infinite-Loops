@@ -31,6 +31,7 @@ const stageStyles: Record<PipelineStage, string> = {
   Interview: 'bg-amber-100 text-amber-700',
   Offer: 'bg-emerald-100 text-emerald-700',
   Rejected: 'bg-red-100 text-red-700',
+  Ghosted: 'bg-slate-200 text-slate-700',
   Archived: 'bg-gray-100 text-gray-500',
 };
 
@@ -113,6 +114,7 @@ export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: Bo
     error: detailError,
     openJob,
     closeJob,
+    updateJobState,
   } = useJobDetail();
 
   // Fetch all jobs for the authenticated user.
@@ -388,19 +390,14 @@ export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: Bo
                   {/* stopPropagation prevents the edit button click from
                       also firing the row click and opening the detail panel. */}
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                    <JobFormModal
-                      job={{
-                        id: job.id,
-                        title: job.title,
-                        company: job.company,
-                        location: job.location,
-                        pipelineStage: job.pipelineStage,
-                        deadline: job.deadline ? job.deadline.split('T')[0] : undefined,
-                        priorityFlag: job.priorityFlag,
-                      }}
-                      onSubmit={(data) => handleEditJob(job, data)}
-                      onDelete={() => handleDeleteJob(job)}
-                    />
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => handleDeleteJob(job)}
+                      className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+                      aria-label="Delete job"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    </Button>
                   </td>
                 </tr>
               );
@@ -417,6 +414,10 @@ export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: Bo
         isLoading={isDetailLoading}
         error={detailError}
         onClose={closeJob}
+        onJobUpdated={(updates) => {
+          updateJobState(updates);
+          void fetchJobs(); // Background refresh the main grid
+        }}
       />
     </>
   );
