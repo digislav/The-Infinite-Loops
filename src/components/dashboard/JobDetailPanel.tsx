@@ -1,5 +1,6 @@
 'use client';
 
+import { InterviewSection } from './InterviewSection';
 import { JobActivityTimeline } from './JobActivityTimeline';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -483,13 +484,20 @@ export function JobDetailPanel({
               )
             )}
 
+            {/* S2-011: Interview Section — shows scheduled interviews and
+    allows adding new interview events with round type, date/time,
+    location, and notes. Auth and ownership enforced on the backend. */}
+            <div className="mt-5 border-b border-gray-100 pb-5">
+              <InterviewSection jobId={job.id} />
+            </div>
+
             {/* S2-010: Activity Timeline — shows all stage changes, interviews,
-                and note updates for this job in reverse chronological order.
-                The timeline component fetches from the protected API route which
-                enforces ownership server-side per S1-003 §4.3.
-                - Blue dot: stage changes
-                - Amber dot: interview events (from S2-011)
-                - Gray dot: note updates */}
+    and note updates for this job in reverse chronological order.
+    The timeline component fetches from the protected API route which
+    enforces ownership server-side per S1-003 §4.3.
+    - Blue dot: stage changes
+    - Amber dot: interview events (from S2-011)
+    - Gray dot: note updates */}
             <div className="mt-5">
               <JobActivityTimeline jobId={job.id} />
             </div>
