@@ -19,6 +19,23 @@ export type Job = {
   updated_at?: string
 }
 
+// New type for interviews (S2-011)
+export type JobActivity = {
+  id?: string
+  job_id: string
+  activity_type: 'STAGE_CHANGE' | 'INTERVIEW_SCHEDULED' | 'NOTE_ADDED'
+  timeline_event_type?: string
+  notes?: string
+  
+  // Interview specific fields (The S2-011 additions)
+  interview_round?: string 
+  interview_date?: string
+  location_url?: string
+  
+  activity_date: string
+  created_at?: string
+}
+
 // 1. GET ALL
 export async function getJobs(userId: string, filters?: { status?: string, deadline?: string }) {
   const supabase = await createClient(); // ADDED AWAIT
@@ -120,4 +137,32 @@ export async function deleteJob(id: string, userId: string) {
     .delete()
     .eq('id', id)
     .eq('user_id', userId);
+}
+
+// GET function to fetch only the interview events for a specific job
+export async function getInterviewsByJob(jobId: string) {
+  const supabase = await createClient();
+  return await supabase
+    .from('job_activities')
+    .select('*')
+    .eq('job_id', jobId)
+    .eq('activity_type', 'INTERVIEW_SCHEDULED')
+    .order('interview_date', { ascending: true });
+}
+
+
+// POST function for saving interview details (S2-011)
+export async function addInterview(userId: string, jobId: string, data: Partial<JobActivity>) {
+  const supabase = await createClient();
+  
+  return await supabase
+    .from('job_activities')
+    .insert({
+      ...data,
+      job_id: jobId,
+      activity_type: 'INTERVIEW_SCHEDULED',
+      activity_date: new Date().toISOString()
+    })
+    .select()
+    .single();
 }

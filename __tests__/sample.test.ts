@@ -1,3 +1,4 @@
+//unit tests
 describe('Sample Frontend Test', () => {
   it('adds two numbers correctly', () => {
     const result = 1 + 2;
@@ -10,7 +11,7 @@ describe('Sample Frontend Test', () => {
 });
 
 describe('Sample Backend Test', () => {
-  //show for b2.2
+  //show for b2.2(unit test for normal behavior)
   it('correctly formats a user object', () => {
     const user = { id: '123', email: 'test@example.com' };
     expect(user).toHaveProperty('id');
@@ -24,7 +25,7 @@ describe('Sample Backend Test', () => {
 });
 
 describe('Ownership and Authorization', () => {
-  //show for b1.5 and b2.3
+  //show for b1.5(ownership denial)
   it('prevents a logged in user from accessing another users data', () => {
     const userAJob = { id: 'job-123', user_id: 'user-A' };
     const requestingUserId = 'user-B';

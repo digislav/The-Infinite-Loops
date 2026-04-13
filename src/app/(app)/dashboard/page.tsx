@@ -17,13 +17,14 @@ const DEFAULT_FILTERS: JobFilters = {
 export default function DashboardPage() {
   const [filters, setFilters] = useState<JobFilters>(DEFAULT_FILTERS);
   const [locations, setLocations] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <div className="flex flex-col gap-6">
-      <DashboardHeader />
+      <DashboardHeader onSearch={setSearchQuery} />
       <StatsBar />
       <BoardControls filters={filters} onFiltersChange={setFilters} locations={locations} />
-      <BoardContent filters={filters} onLocationsReady={setLocations} />
+      <BoardContent filters={filters} onLocationsReady={setLocations} searchQuery={searchQuery} />
     </div>
   );
 }

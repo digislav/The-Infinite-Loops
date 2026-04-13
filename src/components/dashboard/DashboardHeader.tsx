@@ -4,7 +4,11 @@ import { Input } from '@/components/ui/input';
 import { JobFormModal } from './JobFormModal';
 import { type JobFormValues } from './JobForm';
 
-export function DashboardHeader() {
+interface DashboardHeaderProps {
+  onSearch?: (query: string) => void;
+}
+
+export function DashboardHeader({ onSearch }: DashboardHeaderProps) {
   async function handleAddJob(data: JobFormValues): Promise<void> {
     const payload = {
       job_title: data.title,
@@ -33,6 +37,7 @@ export function DashboardHeader() {
           placeholder="Search jobs, companies…"
           className="w-full sm:w-72"
           aria-label="Search jobs and companies"
+          onChange={(e) => onSearch?.(e.target.value)}
         />
         <JobFormModal onSubmit={handleAddJob} />
       </div>

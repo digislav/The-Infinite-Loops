@@ -16,7 +16,7 @@ describe('formatDateOnly', () => {
     // Stored as midnight UTC — should still display as April 7, not April 6
     expect(formatDateOnly('2026-04-07T00:00:00.000Z')).toBe('4/7/26');
   });
-
+  //non happy test
   it('returns empty string for undefined', () => {
     expect(formatDateOnly(undefined)).toBe('');
   });
@@ -72,7 +72,7 @@ describe('toUIJob', () => {
   it('maps id correctly', () => {
     expect(toUIJob(baseRecord).id).toBe('abc-123');
   });
-
+  //happy test
   it('maps job_title to title', () => {
     expect(toUIJob(baseRecord).title).toBe('Software Engineer');
   });
