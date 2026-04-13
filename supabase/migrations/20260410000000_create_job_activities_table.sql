@@ -2,13 +2,15 @@
 CREATE TABLE IF NOT EXISTS public.job_activities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID NOT NULL REFERENCES public.jobs(id) ON DELETE CASCADE,
-    activity_type TEXT NOT NULL, -- e.g., 'STAGE_CHANGE', 'INTERVIEW', 'NOTE'
-    round_type TEXT NULL,        -- e.g., 'Technical', 'Behavioral'
+    activity_type TEXT NOT NULL, -- e.g., 'STAGE_CHANGE', 'INTERVIEW', 'NOTE'     -- e.g., 'Technical', 'Behavioral'
     notes TEXT NULL,
     activity_date TIMESTAMPTZ DEFAULT now(),
     is_completed BOOLEAN DEFAULT false,
     timeline_event_type TEXT NULL, -- e.g., 'Interview', 'Offer'
-    created_at TIMESTAMPTZ DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now(),
+    interview_date TIMESTAMPTZ,
+    interview_round TEXT, -- 'Technical', 'HR', etc.
+    location_url TEXT   -- Zoom link
 );
 
 --  Add an index for faster lookups
