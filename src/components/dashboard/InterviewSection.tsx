@@ -59,7 +59,7 @@ export function InterviewSection({ jobId }: InterviewSectionProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   // Form field state — controlled inputs per S1-002 §5.3.
-  const [round, setRound] = useState('');
+  const [round, setRound] = useState<string>('');
   const [interviewDate, setInterviewDate] = useState('');
   const [locationUrl, setLocationUrl] = useState('');
   const [notes, setNotes] = useState('');
@@ -215,7 +215,7 @@ export function InterviewSection({ jobId }: InterviewSectionProps) {
             <Label htmlFor="interview-round" className="text-xs text-gray-500">
               Round Type <span className="text-red-500">*</span>
             </Label>
-            <Select value={round} onValueChange={(val) => setRound(val)}>
+            <Select value={round} onValueChange={(val) => setRound(val ?? '')}>
               <SelectTrigger id="interview-round" className="h-8 text-xs">
                 <SelectValue placeholder="Select round type" />
               </SelectTrigger>
