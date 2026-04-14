@@ -14,7 +14,13 @@ type StageCounts = {
   Archived: number;
 };
 
-export function StatsBar() {
+interface StatsBarProps {
+  // refreshKey increments every time a job is added, updated, archived,
+  // or deleted — triggering the stats to re-fetch automatically.
+  refreshKey: number;
+}
+
+export function StatsBar({ refreshKey }: StatsBarProps) {
   const [counts, setCounts] = useState<StageCounts>({
     Total: 0,
     Interested: 0,
@@ -26,10 +32,12 @@ export function StatsBar() {
     Archived: 0,
   });
 
+  // Re-fetch counts whenever refreshKey changes.
+  // refreshKey is incremented by DashboardPage whenever a job action completes.
   useEffect(() => {
     async function fetchCounts() {
       try {
-        const res = await fetch('/api/jobs');
+        const res = await fetch('/api/jobs?all=true');
         if (!res.ok) return;
         const json = await res.json();
         const jobs = json.data ?? [];
@@ -54,11 +62,11 @@ export function StatsBar() {
 
         setCounts(newCounts);
       } catch {
-        // silently fail — counts stay at 0
+        // silently fail — counts stay at previous values
       }
     }
     fetchCounts();
-  }, []);
+  }, [refreshKey]); // re-runs whenever refreshKey changes
 
   return (
     <div className="flex flex-wrap gap-3">
