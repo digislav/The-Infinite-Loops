@@ -7,17 +7,17 @@
 // Per S1-002 §4.3 — deadline must be highlighted if within 3 days.
 // Per S1-002 §5.5 — always use the Badge component for status indicators.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { BriefcaseIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Flag } from 'lucide-react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
 import type { Job, PipelineStage, JobRecord } from '@/types/job.types';
 import { toUIJob } from '@/types/job.types';
 import { JobFormModal } from './JobFormModal';
-import type { JobFormValues } from './JobForm';
 import type { JobFilters } from './BoardControls';
 import { useJobDetail } from '@/hooks/useJobDetail';
 import { JobDetailPanel } from './JobDetailPanel';
@@ -87,10 +87,30 @@ interface BoardContentProps {
   searchQuery?: string;
 }
 
+type SortField =
+  | 'title'
+  | 'company'
+  | 'location'
+  | 'pipelineStage'
+  | 'lastActivityDate'
+  | 'deadline';
+type SortDirection = 'asc' | 'desc';
+
 export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: BoardContentProps) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>('title');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  }
 
   // Apply both filter dropdown selections and free-text search.
   // Search matches case-insensitively against title, company, and location.
@@ -111,6 +131,39 @@ export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: Bo
       return false;
     return true;
   });
+  // Sort the filtered jobs based on the current sort field and direction.
+  const sortedJobs = [...filteredJobs].sort((a, b) => {
+    let aVal: string | number | Date, bVal: string | number | Date;
+    switch (sortField) {
+      case 'title':
+        aVal = a.title.toLowerCase();
+        bVal = b.title.toLowerCase();
+        break;
+      case 'company':
+        aVal = a.company.toLowerCase();
+        bVal = b.company.toLowerCase();
+        break;
+      case 'location':
+        aVal = (a.location || '').toLowerCase();
+        bVal = (b.location || '').toLowerCase();
+        break;
+      case 'pipelineStage':
+        aVal = a.pipelineStage;
+        bVal = b.pipelineStage;
+        break;
+      case 'lastActivityDate':
+        aVal = new Date(a.lastActivityDate);
+        bVal = new Date(b.lastActivityDate);
+        break;
+      case 'deadline':
+        aVal = a.deadline ? new Date(a.deadline) : new Date(0);
+        bVal = b.deadline ? new Date(b.deadline) : new Date(0);
+        break;
+    }
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
   // useJobDetail manages which job is selected and fetches its full record.
   // openJob is called when a row is clicked; closeJob dismisses the panel.
   const {
@@ -126,7 +179,7 @@ export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: Bo
   // Fetch all jobs for the authenticated user.
   // The API route enforces auth and ownership server-side —
   // we never pass a user_id from the client per S1-003 §5.4.
-  async function fetchJobs() {
+  const fetchJobs = useCallback(async () => {
     try {
       const res = await fetch('/api/jobs');
       if (!res.ok) throw new Error('Failed to fetch jobs');
@@ -145,32 +198,11 @@ export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: Bo
     } finally {
       setLoading(false);
     }
-  }
+  }, [onLocationsReady]);
 
   useEffect(() => {
     fetchJobs();
-  }, []);
-
-  // handleEditJob — sends a PUT to the protected API route then re-fetches.
-  // user_id is never included in the payload — the backend uses
-  // the session identity per S1-003 §5.4.
-  async function handleEditJob(job: Job, data: JobFormValues): Promise<void> {
-    const payload = {
-      job_title: data.title,
-      company_name: data.company,
-      location: data.location || undefined,
-      current_stage: data.pipelineStage,
-      deadline: data.deadline || undefined,
-      is_priority: data.priorityFlag,
-    };
-    const res = await fetch(`/api/jobs/${job.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error('Failed to update job');
-    await fetchJobs();
-  }
+  }, [fetchJobs]);
 
   // handleDeleteJob — per S1-002 §9.4 destructive actions require confirmation.
   async function handleDeleteJob(job: Job): Promise<void> {
@@ -255,7 +287,7 @@ export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: Bo
 
   // EMPTY STATE — per S1-002 §5.7 every list that can be empty must have
   // an empty state with an icon, message, and primary action button.
-  if (filteredJobs.length === 0) {
+  if (sortedJobs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#D9E2F3]">
@@ -304,25 +336,73 @@ export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: Bo
         <table className="w-full text-sm">
           <thead className="border-b border-gray-200 bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left font-semibold text-gray-600">Job Title</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-600">Company</th>
-              <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 md:table-cell">
-                Location
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">
+                <button
+                  onClick={() => handleSort('title')}
+                  className="flex items-center gap-1 hover:text-gray-800"
+                >
+                  Job Title
+                  {sortField === 'title' &&
+                    (sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                </button>
               </th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-600">Stage</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">
+                <button
+                  onClick={() => handleSort('company')}
+                  className="flex items-center gap-1 hover:text-gray-800"
+                >
+                  Company
+                  {sortField === 'company' &&
+                    (sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                </button>
+              </th>
+              <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 md:table-cell">
+                <button
+                  onClick={() => handleSort('location')}
+                  className="flex items-center gap-1 hover:text-gray-800"
+                >
+                  Location
+                  {sortField === 'location' &&
+                    (sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">
+                <button
+                  onClick={() => handleSort('pipelineStage')}
+                  className="flex items-center gap-1 hover:text-gray-800"
+                >
+                  Stage
+                  {sortField === 'pipelineStage' &&
+                    (sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                </button>
+              </th>
               <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 lg:table-cell">
-                Last Activity
+                <button
+                  onClick={() => handleSort('lastActivityDate')}
+                  className="flex items-center gap-1 hover:text-gray-800"
+                >
+                  Last Activity
+                  {sortField === 'lastActivityDate' &&
+                    (sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                </button>
               </th>
               {/* S2-004: Deadline column now shows both the date and
                   an UrgencyBadge so urgency is immediately visible. */}
               <th className="hidden px-4 py-3 text-left font-semibold text-gray-600 lg:table-cell">
-                Deadline
+                <button
+                  onClick={() => handleSort('deadline')}
+                  className="flex items-center gap-1 hover:text-gray-800"
+                >
+                  Deadline
+                  {sortField === 'deadline' &&
+                    (sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                </button>
               </th>
               <th className="px-4 py-3 text-right font-semibold text-gray-600">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
-            {filteredJobs.map((job) => {
+            {sortedJobs.map((job) => {
               return (
                 <tr
                   key={job.id}
