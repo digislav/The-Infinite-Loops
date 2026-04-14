@@ -17,6 +17,13 @@ import { cn } from '@/lib/utils';
 import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
 import type { Job, PipelineStage, JobRecord } from '@/types/job.types';
 import { toUIJob } from '@/types/job.types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { JobFormModal } from './JobFormModal';
 import type { JobFilters } from './BoardControls';
 import { useJobDetail } from '@/hooks/useJobDetail';
@@ -34,6 +41,16 @@ const stageStyles: Record<PipelineStage, string> = {
   Ghosted: 'bg-slate-200 text-slate-700',
   Archived: 'bg-gray-100 text-gray-500',
 };
+
+const STAGES: PipelineStage[] = [
+  'Interested',
+  'Applied',
+  'Interview',
+  'Offer',
+  'Rejected',
+  'Ghosted',
+  'Archived',
+];
 
 // isDeadlineSoon — returns true if the deadline is within 3 days but not yet passed.
 // Per S1-002 §4.3 — deadline must be highlighted if within 3 days.
@@ -216,6 +233,20 @@ export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: Bo
       return;
     }
     await fetchJobs();
+  }
+
+  async function handleInlineStageUpdate(jobId: string, newStage: PipelineStage) {
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_stage: newStage }),
+      });
+      if (!res.ok) throw new Error('Failed to update stage');
+      await fetchJobs();
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   // LOADING STATE — skeleton rows while data is fetching.
@@ -431,16 +462,28 @@ export function BoardContent({ filters, onLocationsReady, searchQuery = '' }: Bo
                   <td className="px-4 py-3 text-gray-600">{job.company}</td>
                   <td className="hidden px-4 py-3 text-gray-500 md:table-cell">{job.location}</td>
                   <td className="px-4 py-3">
-                    {/* Stage badge — colour-coded per S1-002 §4.5 and §5.5.
-                        Always uses the Badge component, never free-form colour. */}
-                    <Badge
-                      className={cn(
-                        'rounded-full border-0 px-2 py-0.5 text-xs font-medium',
-                        stageStyles[job.pipelineStage],
-                      )}
-                    >
-                      {job.pipelineStage}
-                    </Badge>
+                    <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                      <Select
+                        value={job.pipelineStage}
+                        onValueChange={(val) => handleInlineStageUpdate(job.id, val as PipelineStage)}
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            'h-fit w-fit border-0 px-2 py-0.5 text-xs font-medium rounded-full shadow-none focus:ring-0 focus:ring-offset-0',
+                            stageStyles[job.pipelineStage]
+                          )}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAGES.map((s) => (
+                            <SelectItem key={s} value={s} className="text-sm">
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </td>
                   <td className="hidden px-4 py-3 text-gray-500 lg:table-cell">
                     {formatTimestamp(job.lastActivityDate)}
