@@ -24,6 +24,8 @@ export type Job = {
   custom_notes?: string;
   created_at?: string;
   updated_at?: string;
+  is_archived?: boolean;
+  last_status_before_archive?: string;
 };
 
 // Type for all activity timeline events.
@@ -44,14 +46,27 @@ export type JobActivity = {
 };
 
 // 1. GET ALL
-export async function getJobs(userId: string, filters?: { status?: string; deadline?: string }) {
-  const supabase = await createClient();
-  let query = supabase.from('jobs').select('*').eq('user_id', userId);
+export async function getJobs(userId: string, filters?: { status?: string, deadline?: string, showArchived?: boolean, all?: boolean }
+) {  const supabase = await createClient();
+  
+  let query = supabase
+    .from('jobs')
+    .select('*')
+    .eq('user_id', userId);
+
+  // If showArchived is NOT explicitly true, hide the archived jobs
+  if (filters?.all) {
+    // Do nothing, let everything through
+  } else if (filters?.status === 'Archived' || filters?.showArchived) {
+    query = query.eq('is_archived', true);
+  } else {
+    query = query.eq('is_archived', false);
+  }
 
   if (filters?.status) {
     query = query.eq('current_stage', filters.status);
   }
-
+  
   if (filters?.deadline) {
     query = query.lte('deadline', filters.deadline);
   }
@@ -108,7 +123,15 @@ export async function updateJob(id: string, userId: string, updates: Partial<Job
   // Per S2-009 — stage transitions are recorded with timestamps.
   // We only record this when current_stage is in the payload, which
   // JobDetailPanel.tsx only includes when the stage actually changed.
+  
   if (updates.current_stage) {
+    if (updates.current_stage === 'Archived') {
+    updates.is_archived = true;
+  } else {
+    // If they move it OUT of archived to something else or if the job is any other stage, set it to false
+    updates.is_archived = false;
+  }
+  
     try {
       await supabase.from('job_activities').insert({
         job_id: id,
@@ -205,4 +228,45 @@ export async function getActivitiesByJob(jobId: string, userId: string) {
     .eq('jobs.user_id', userId)
     // Most recent activity first
     .order('activity_date', { ascending: false });
+}
+
+// (S2-014) ARCHIVE: Saves the old stage and the set is_archived to 
+// true by logging and updating the job. This allows users to keep 
+// archived jobs in their history and restore them later if needed, 
+// while also maintaining a record of the job's last stage before 
+// archival for better context.
+export async function archiveJob(jobId: string, userId: string, currentStage: string) {
+  const supabase = await createClient();
+  
+  await supabase.from('job_activities').insert({
+    job_id: jobId,
+    activity_type: 'STAGE_CHANGE',
+    notes: 'Job archived',
+    activity_date: new Date().toISOString()
+  });
+
+
+  return await supabase
+    .from('jobs')
+    .update({ 
+      is_archived: true,
+      last_status_before_archive: currentStage,
+      current_stage: 'Archived' 
+    })
+    .eq('id', jobId)
+    .eq('user_id', userId);
+}
+
+// (S2-014) RESTORE Archived Jobs: Bring it back to where it was
+export async function restoreJob(jobId: string, userId: string, fallbackStage: string) {
+  const supabase = await createClient();
+
+  return await supabase
+    .from('jobs')
+    .update({ 
+      is_archived: false, 
+      current_stage: fallbackStage || 'Interested' 
+    })
+    .eq('id', jobId)
+    .eq('user_id', userId);
 }
