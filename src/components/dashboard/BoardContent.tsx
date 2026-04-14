@@ -1,12 +1,5 @@
 'use client';
 
-// S2-004: Implement Stage/Status Indicators on Job Cards.
-// This file already had stage badges and deadline colour coding.
-// S2-004 adds a dedicated UrgencyBadge component that makes urgency
-// cues explicit and immediately visible at a glance — not just coloured text.
-// Per S1-002 §4.3 — deadline must be highlighted if within 3 days.
-// Per S1-002 §5.5 — always use the Badge component for status indicators.
-
 import { useEffect, useState, useCallback } from 'react';
 import { BriefcaseIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,12 +17,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { JobFormModal } from './JobFormModal';
 import type { JobFilters } from './BoardControls';
 import { useJobDetail } from '@/hooks/useJobDetail';
 import { JobDetailPanel } from './JobDetailPanel';
 
-// Pipeline stage colour tokens — per S1-002 §4.5.
 const stageStyles: Record<PipelineStage, string> = {
   Interested: 'bg-indigo-100 text-indigo-700',
   Applied: 'bg-blue-100 text-blue-700',
@@ -50,20 +52,17 @@ const STAGES: PipelineStage[] = [
   'Archived',
 ];
 
-// isDeadlineSoon — returns true if the deadline is within 3 days but not yet passed.
 export function isDeadlineSoon(deadline?: string): boolean {
   if (!deadline) return false;
   const diff = new Date(deadline).getTime() - Date.now();
   return diff > 0 && diff <= 3 * 24 * 60 * 60 * 1000;
 }
 
-// isDeadlineOverdue — returns true if the deadline has already passed.
 export function isDeadlineOverdue(deadline?: string): boolean {
   if (!deadline) return false;
   return new Date(deadline).getTime() < Date.now();
 }
 
-// UrgencyBadge — S2-004 core component.
 function UrgencyBadge({ deadline }: { deadline?: string }) {
   const overdue = isDeadlineOverdue(deadline);
   const soon = isDeadlineSoon(deadline);
@@ -87,8 +86,6 @@ interface BoardContentProps {
   filters: JobFilters;
   onLocationsReady: (locations: string[]) => void;
   searchQuery?: string;
-  // Called after any job mutation (add, edit, archive, delete)
-  // so the parent can refresh the stats bar.
   onJobsChanged?: () => void;
 }
 
@@ -112,6 +109,7 @@ export function BoardContent({
   const [error, setError] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('title');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
 
   function handleSort(field: SortField) {
     if (sortField === field) {
@@ -207,18 +205,15 @@ export function BoardContent({
     fetchJobs();
   }, [fetchJobs]);
 
-  async function handleDeleteJob(job: Job): Promise<void> {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${job.title}" at ${job.company}? This cannot be undone.`,
-    );
-    if (!confirmed) return;
-    const res = await fetch(`/api/jobs/${job.id}`, { method: 'DELETE' });
+  async function confirmDelete(): Promise<void> {
+    if (!jobToDelete) return;
+    const res = await fetch(`/api/jobs/${jobToDelete.id}`, { method: 'DELETE' });
     if (!res.ok) {
       alert('Failed to delete job. Please try again.');
       return;
     }
+    setJobToDelete(null);
     await fetchJobs();
-    // Notify parent to refresh stats bar.
     onJobsChanged?.();
   }
 
@@ -231,7 +226,6 @@ export function BoardContent({
       });
       if (!res.ok) throw new Error('Failed to update stage');
       await fetchJobs();
-      // Notify parent to refresh stats bar.
       onJobsChanged?.();
     } catch (err) {
       console.error(err);
@@ -335,7 +329,6 @@ export function BoardContent({
               });
               if (!res.ok) throw new Error('Failed to create job');
               await fetchJobs();
-              // Notify parent to refresh stats bar.
               onJobsChanged?.();
             }}
           />
@@ -484,7 +477,7 @@ export function BoardContent({
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost"
-                      onClick={() => handleDeleteJob(job)}
+                      onClick={() => setJobToDelete(job)}
                       className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
                       aria-label="Delete job"
                     >
@@ -523,10 +516,35 @@ export function BoardContent({
         onJobUpdated={(updates) => {
           updateJobState(updates);
           void fetchJobs();
-          // Notify parent to refresh stats bar after detail panel save.
           onJobsChanged?.();
         }}
       />
+
+      <AlertDialog
+        open={!!jobToDelete}
+        onOpenChange={(open) => {
+          if (!open) setJobToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this job?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{jobToDelete?.title}&quot; at{' '}
+              {jobToDelete?.company}? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
