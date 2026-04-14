@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { apiSuccess, apiError } from '@/lib/utils/apiResponse';
 import { getJobById, updateJob, deleteJob } from '@/lib/services/jobServices';
+import { revalidatePath } from 'next/cache';
 
 // GET /api/jobs/:id
 // Protected route — returns the full detail record for a single job.
@@ -53,7 +54,6 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
-
     const supabase = await createClient();
 
     // Verify session — first action in every protected handler per S1-003 §2.3.
@@ -76,7 +76,11 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     const { data, error } = await updateJob(id, user.id, safeBody);
 
     if (error) return apiError('INTERNAL_ERROR', 500);
-
+    
+    // for cache issues
+    revalidatePath('/dashboard');
+    revalidatePath('/');
+    
     return apiSuccess(data);
   } catch {
     return apiError('INTERNAL_ERROR', 500);
