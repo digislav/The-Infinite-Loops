@@ -16,7 +16,7 @@ function calculateResponseRate(
   ghosted: number,
 ): number {
   const activeJobs = applied + interview + offer + rejected + ghosted;
-  const responded = interview + offer + rejected + ghosted;
+  const responded = interview + offer + rejected;
   return activeJobs > 0 ? Math.round((responded / activeJobs) * 100) : 0;
 }
 
