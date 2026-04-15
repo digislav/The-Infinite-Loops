@@ -22,6 +22,8 @@ export type Job = {
   application_date?: string;
   recruiter_notes?: string;
   custom_notes?: string;
+  recruiter_contact_notes?: string;
+  outcome_notes?: string;
   created_at?: string;
   updated_at?: string;
   is_archived?: boolean;
