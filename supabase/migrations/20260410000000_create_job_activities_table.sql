@@ -20,34 +20,58 @@ CREATE INDEX IF NOT EXISTS idx_job_activities_job_id ON public.job_activities(jo
 ALTER TABLE public.job_activities ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can VIEW activities for jobs THEY own
-CREATE POLICY "Users can view activities for own jobs"
-ON public.job_activities FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.jobs 
-    WHERE jobs.id = job_activities.job_id 
-    AND jobs.user_id = auth.uid()
-  )
-);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE policyname = 'Users can view activities for own jobs'
+    AND tablename = 'job_activities'
+  ) THEN
+    CREATE POLICY "Users can view activities for own jobs"
+    ON public.job_activities FOR SELECT
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.jobs 
+        WHERE jobs.id = job_activities.job_id 
+        AND jobs.user_id = auth.uid()
+      )
+    );
+  END IF;
+END $$;
 
 -- Policy: Users can INSERT activities only for jobs THEY own
-CREATE POLICY "Users can insert activities for own jobs"
-ON public.job_activities FOR INSERT
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.jobs 
-    WHERE jobs.id = job_activities.job_id 
-    AND jobs.user_id = auth.uid()
-  )
-);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE policyname = 'Users can view activities for own jobs'
+    AND tablename = 'job_activities'
+  ) THEN
+    CREATE POLICY "Users can view activities for own jobs"
+    ON public.job_activities FOR SELECT
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.jobs 
+        WHERE jobs.id = job_activities.job_id 
+        AND jobs.user_id = auth.uid()
+      )
+    );
+  END IF;
+END $$;
 
 -- Policy: Users can DELETE/UPDATE activities only for jobs THEY own
-CREATE POLICY "Users can modify activities for own jobs"
-ON public.job_activities FOR ALL
-USING (
-  EXISTS (
-    SELECT 1 FROM public.jobs 
-    WHERE jobs.id = job_activities.job_id 
-    AND jobs.user_id = auth.uid()
-  )
-);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE policyname = 'Users can view activities for own jobs'
+    AND tablename = 'job_activities'
+  ) THEN
+    CREATE POLICY "Users can view activities for own jobs"
+    ON public.job_activities FOR SELECT
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.jobs 
+        WHERE jobs.id = job_activities.job_id 
+        AND jobs.user_id = auth.uid()
+      )
+    );
+  END IF;
+END $$;

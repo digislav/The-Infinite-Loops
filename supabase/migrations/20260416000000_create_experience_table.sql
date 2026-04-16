@@ -1,5 +1,5 @@
 -- Experience table
-CREATE TABLE public.experience (
+CREATE TABLE IF NOT EXISTS public.experience (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   company_name TEXT NOT NULL,
@@ -18,8 +18,16 @@ CREATE TABLE public.experience (
 ALTER TABLE public.experience ENABLE ROW LEVEL SECURITY;
 
 -- Create Policy
-CREATE POLICY "Users can manage their own experience" 
-ON public.experience
-FOR ALL 
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE policyname = 'Users can manage their own experience'
+    AND tablename = 'experience'
+  ) THEN
+    CREATE POLICY "Users can manage their own experience"
+    ON public.experience
+    FOR ALL
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+  END IF;
+END $$;
