@@ -14,22 +14,39 @@ import { createClient } from '@/lib/supabase/server';
 // Mock the Supabase server client.
 jest.mock('@/lib/supabase/server');
 
-// Mock query chains for each operation.
+// Mock query chain for getEducation:
+// supabase.from().select().eq().order()
+const mockOrder = jest.fn();
+const mockEqUserIdGet = jest.fn(() => ({ order: mockOrder }));
+const mockSelectGet = jest.fn(() => ({ eq: mockEqUserIdGet }));
+
+// Mock query chain for createEducation:
+// supabase.from().insert().select().single()
 const mockSingle = jest.fn();
-const mockSelect = jest.fn(() => ({ eq: mockEqUserId }));
-const mockEqOrder = jest.fn(() => ({ data: [], error: null }));
-const mockOrder = jest.fn(() => mockEqOrder());
-const mockEqUserId = jest.fn(() => ({ order: mockOrder, single: mockSingle }));
-const mockEqId = jest.fn(() => ({ eq: mockEqUserId }));
-const mockUpdate = jest.fn(() => ({ eq: mockEqId }));
-const mockDelete = jest.fn(() => ({ eq: mockEqId }));
-const mockInsert = jest.fn(() => ({ select: () => ({ single: mockSingle }) }));
+const mockSelectInsert = jest.fn(() => ({ single: mockSingle }));
+const mockInsert = jest.fn(() => ({ select: mockSelectInsert }));
+
+// Mock query chain for updateEducation:
+// supabase.from().update().eq('id').eq('user_id').select().single()
+const mockSingleUpdate = jest.fn();
+const mockSelectUpdate = jest.fn(() => ({ single: mockSingleUpdate }));
+const mockEqUserIdUpdate = jest.fn(() => ({ select: mockSelectUpdate }));
+const mockEqIdUpdate = jest.fn(() => ({ eq: mockEqUserIdUpdate }));
+const mockUpdate = jest.fn(() => ({ eq: mockEqIdUpdate }));
+
+// Mock query chain for deleteEducation:
+// supabase.from().delete().eq('id').eq('user_id')
+const mockEqUserIdDelete = jest.fn();
+const mockEqIdDelete = jest.fn(() => ({ eq: mockEqUserIdDelete }));
+const mockDelete = jest.fn(() => ({ eq: mockEqIdDelete }));
+
 const mockFrom = jest.fn(() => ({
-  select: mockSelect,
+  select: mockSelectGet,
   insert: mockInsert,
   update: mockUpdate,
   delete: mockDelete,
 }));
+
 const mockSupabase = { from: mockFrom };
 
 beforeEach(() => {
@@ -65,7 +82,7 @@ describe('getEducation', () => {
   it('queries with the correct user_id to enforce ownership', async () => {
     mockOrder.mockResolvedValue({ data: [], error: null });
     await getEducation('user-abc');
-    expect(mockEqUserId).toHaveBeenCalledWith('user_id', 'user-abc');
+    expect(mockEqUserIdGet).toHaveBeenCalledWith('user_id', 'user-abc');
   });
 
   // ERROR — database failure handled gracefully.
@@ -122,22 +139,22 @@ describe('createEducation', () => {
 describe('updateEducation', () => {
   // HAPPY PATH — updates an existing record.
   it('updates an education record owned by the user', async () => {
-    mockSingle.mockResolvedValue({ data: mockRecord, error: null });
+    mockSingleUpdate.mockResolvedValue({ data: mockRecord, error: null });
     const result = await updateEducation('edu-123', 'user-abc', { institution: 'MIT' });
     expect(result.data).toEqual(mockRecord);
   });
 
   // OWNERSHIP — verify both id and user_id filters applied.
   it('enforces ownership by filtering on both id and user_id', async () => {
-    mockSingle.mockResolvedValue({ data: mockRecord, error: null });
+    mockSingleUpdate.mockResolvedValue({ data: mockRecord, error: null });
     await updateEducation('edu-123', 'user-abc', { institution: 'MIT' });
-    expect(mockEqId).toHaveBeenCalledWith('id', 'edu-123');
-    expect(mockEqUserId).toHaveBeenCalledWith('user_id', 'user-abc');
+    expect(mockEqIdUpdate).toHaveBeenCalledWith('id', 'edu-123');
+    expect(mockEqUserIdUpdate).toHaveBeenCalledWith('user_id', 'user-abc');
   });
 
   // OWNERSHIP DENIAL — wrong user gets null back.
   it('returns null when user does not own the record', async () => {
-    mockSingle.mockResolvedValue({ data: null, error: { message: 'No rows' } });
+    mockSingleUpdate.mockResolvedValue({ data: null, error: { message: 'No rows' } });
     const result = await updateEducation('edu-123', 'wrong-user', { institution: 'MIT' });
     expect(result.data).toBeNull();
   });
@@ -146,16 +163,16 @@ describe('updateEducation', () => {
 describe('deleteEducation', () => {
   // HAPPY PATH — deletes a record.
   it('deletes an education record owned by the user', async () => {
-    mockEqUserId.mockResolvedValue({ error: null });
+    mockEqUserIdDelete.mockResolvedValue({ error: null });
     const result = await deleteEducation('edu-123', 'user-abc');
     expect(result.error).toBeNull();
   });
 
   // OWNERSHIP — verify both id and user_id filters applied.
   it('enforces ownership by filtering on both id and user_id', async () => {
-    mockEqUserId.mockResolvedValue({ error: null });
+    mockEqUserIdDelete.mockResolvedValue({ error: null });
     await deleteEducation('edu-123', 'user-abc');
-    expect(mockEqId).toHaveBeenCalledWith('id', 'edu-123');
-    expect(mockEqUserId).toHaveBeenCalledWith('user_id', 'user-abc');
+    expect(mockEqIdDelete).toHaveBeenCalledWith('id', 'edu-123');
+    expect(mockEqUserIdDelete).toHaveBeenCalledWith('user_id', 'user-abc');
   });
 });
