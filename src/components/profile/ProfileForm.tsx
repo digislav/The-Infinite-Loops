@@ -1,5 +1,6 @@
 'use client';
 
+import { EducationSection } from './EducationSection';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -203,6 +204,9 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
           />
         </div>
       </div>
+
+      {/* Education Section — S2-017 */}
+      <EducationSection />
 
       {/* Save Button */}
       <div className="flex items-center justify-end gap-4">
