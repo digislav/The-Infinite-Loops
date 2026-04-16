@@ -15,6 +15,7 @@
 
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { formatDateOnly } from '@/lib/utils/dateFormatters';
@@ -25,13 +26,14 @@ import type { PipelineStage } from '@/types/job.types';
 interface JobActivity {
   id: string;
   job_id: string;
-  activity_type: 'STAGE_CHANGE' | 'INTERVIEW_SCHEDULED' | 'NOTE_ADDED';
+  activity_type: 'STAGE_CHANGE' | 'INTERVIEW_SCHEDULED' | 'NOTE_ADDED' | 'REMINDER_SET';
   timeline_event_type?: string;
   notes?: string;
   activity_date: string;
   interview_round?: string;
   interview_date?: string;
   location_url?: string;
+  is_completed?: boolean;
   created_at?: string;
 }
 
@@ -51,7 +53,7 @@ const stageStyles: Record<string, string> = {
 // ActivityIcon — renders a small coloured dot indicating the activity type.
 // Uses simple colour coding so the timeline is scannable at a glance.
 // Per S1-002 §5.5 — status indicators use consistent colour tokens.
-function ActivityIcon({ type }: { type: JobActivity['activity_type'] }) {
+function ActivityIcon({ type, completed }: { type: JobActivity['activity_type']; completed?: boolean }) {
   return (
     <div
       className={cn(
@@ -62,6 +64,8 @@ function ActivityIcon({ type }: { type: JobActivity['activity_type'] }) {
         type === 'INTERVIEW_SCHEDULED' && 'bg-amber-400',
         // Gray dot for notes
         type === 'NOTE_ADDED' && 'bg-gray-400',
+        // Green dot for completed reminders, amber for pending reminders
+        type === 'REMINDER_SET' && (completed ? 'bg-emerald-400' : 'bg-amber-400'),
       )}
       aria-hidden={true}
     />
@@ -70,26 +74,54 @@ function ActivityIcon({ type }: { type: JobActivity['activity_type'] }) {
 
 // ActivityItem — renders a single timeline event.
 // Shows the event type, description, optional stage badge, and date.
-function ActivityItem({ activity }: { activity: JobActivity }) {
-  // Build a human-readable label for each activity type.
+function ActivityItem({
+  activity,
+  onToggleReminder,
+}: {
+  activity: JobActivity;
+  onToggleReminder?: (activity: JobActivity, completed: boolean) => Promise<void>;
+}) {
+  const [isUpdating, setIsUpdating] = useState(false);
+
   const label =
     activity.activity_type === 'STAGE_CHANGE'
       ? `Stage: ${activity.timeline_event_type ?? 'Updated'}`
       : activity.activity_type === 'INTERVIEW_SCHEDULED'
         ? `Interview${activity.interview_round ? ` — ${activity.interview_round}` : ''}`
-        : 'Note';
+        : activity.activity_type === 'REMINDER_SET'
+          ? 'Follow-up Reminder'
+          : 'Note';
+
+  const statusBadge =
+    activity.activity_type === 'REMINDER_SET' ? (
+      <Badge
+        className={cn(
+          'rounded-full border-0 px-2 py-0.5 text-xs font-medium',
+          activity.is_completed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700',
+        )}
+      >
+        {activity.is_completed ? 'Completed' : 'Pending'}
+      </Badge>
+    ) : null;
+
+  async function handleToggle() {
+    if (!onToggleReminder) return;
+    setIsUpdating(true);
+    try {
+      await onToggleReminder(activity, !activity.is_completed);
+    } finally {
+      setIsUpdating(false);
+    }
+  }
 
   return (
     <div className="flex items-start gap-3">
-      {/* Coloured dot indicator */}
-      <ActivityIcon type={activity.activity_type} />
+      <ActivityIcon type={activity.activity_type} completed={activity.is_completed} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex flex-wrap items-center gap-2">
-          {/* Activity label */}
           <span className="text-sm font-medium text-gray-800">{label}</span>
 
-          {/* Stage badge for stage change events — colour-coded per S1-002 §4.5 */}
           {activity.activity_type === 'STAGE_CHANGE' && activity.timeline_event_type && (
             <Badge
               className={cn(
@@ -101,19 +133,36 @@ function ActivityItem({ activity }: { activity: JobActivity }) {
               {activity.timeline_event_type}
             </Badge>
           )}
+
+          {statusBadge}
         </div>
 
-        {/* Activity notes — shown if present */}
         {activity.notes && <p className="text-xs text-gray-500">{activity.notes}</p>}
 
-        {/* Interview date — shown for interview events if set */}
         {activity.activity_type === 'INTERVIEW_SCHEDULED' && activity.interview_date && (
           <p className="text-xs text-gray-500">
             Scheduled: {formatDateOnly(activity.interview_date)}
           </p>
         )}
 
-        {/* Activity date — when the event was recorded */}
+        {activity.activity_type === 'REMINDER_SET' && activity.interview_date && (
+          <p className="text-xs text-gray-500">Due: {formatDateOnly(activity.interview_date)}</p>
+        )}
+
+        {activity.activity_type === 'REMINDER_SET' && (
+          <div className="mt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggle}
+              disabled={isUpdating}
+              className="h-7 rounded-full px-2 text-xs text-gray-600 hover:bg-gray-100"
+            >
+              {activity.is_completed ? 'Reopen reminder' : 'Mark completed'}
+            </Button>
+          </div>
+        )}
+
         <span className="text-xs text-gray-400">{formatDateOnly(activity.activity_date)}</span>
       </div>
     </div>
@@ -124,9 +173,10 @@ interface JobActivityTimelineProps {
   // The ID of the job whose activities to display.
   // The backend verifies the caller owns this job before returning data.
   jobId: string;
+  refreshKey?: number;
 }
 
-export function JobActivityTimeline({ jobId }: JobActivityTimelineProps) {
+export function JobActivityTimeline({ jobId, refreshKey }: JobActivityTimelineProps) {
   const [activities, setActivities] = useState<JobActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,14 +200,12 @@ export function JobActivityTimeline({ jobId }: JobActivityTimelineProps) {
         // we never send a user_id from the client per S1-003 §5.4.
         const res = await fetch(`/api/jobs/${jobId}/activities`);
         if (!res.ok) {
-          // Human-friendly error — never raw HTTP codes per S1-001 §6.3.
           if (!cancelled) setError('Could not load activity timeline.');
           return;
         }
         const json = await res.json();
         if (!cancelled) setActivities(json.data ?? []);
       } catch {
-        // Network or parse failure — safe friendly message.
         if (!cancelled) setError('Could not load activity timeline.');
       } finally {
         if (!cancelled) setLoading(false);
@@ -170,7 +218,7 @@ export function JobActivityTimeline({ jobId }: JobActivityTimelineProps) {
     return () => {
       cancelled = true;
     };
-  }, [jobId]);
+  }, [jobId, refreshKey]);
 
   // LOADING STATE — skeleton placeholders per S1-002 §9.2.
   if (loading) {
@@ -215,7 +263,41 @@ export function JobActivityTimeline({ jobId }: JobActivityTimelineProps) {
         {/* Thin vertical line connecting the dots */}
         <div className="absolute top-2 left-[4px] h-full w-px bg-gray-100" aria-hidden={true} />
         {activities.map((activity) => (
-          <ActivityItem key={activity.id} activity={activity} />
+          <ActivityItem
+            key={activity.id}
+            activity={activity}
+            onToggleReminder={async (activityToUpdate, completed) => {
+              try {
+                const res = await fetch(
+                  `/api/jobs/${jobId}/activities/${activityToUpdate.id}`,
+                  {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_completed: completed }),
+                  },
+                );
+
+                if (!res.ok) {
+                  throw new Error('Failed to update reminder.');
+                }
+
+                const json = await res.json();
+                if (!json?.success) {
+                  throw new Error('Failed to update reminder.');
+                }
+
+                setActivities((current) =>
+                  current.map((item) =>
+                    item.id === activityToUpdate.id
+                      ? { ...item, is_completed: completed }
+                      : item,
+                  ),
+                );
+              } catch {
+                alert('Unable to update reminder status. Please try again.');
+              }
+            }}
+          />
         ))}
       </div>
     </div>
