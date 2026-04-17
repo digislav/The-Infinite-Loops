@@ -2,6 +2,7 @@ export type Proficiency = 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
 
 export interface Skill {
   id?: string;
+  user_id?: string;
   skill_name: string;
   category?: string;
   proficiency?: Proficiency;
