@@ -206,7 +206,7 @@ export function CareerPreferencesSection() {
         <Select
           value={workMode}
           onValueChange={(val) => {
-            setWorkMode(val as WorkMode);
+            setWorkMode((val ?? 'Any') as WorkMode);
             markChanged();
           }}
         >
@@ -248,7 +248,7 @@ export function CareerPreferencesSection() {
           <Select
             value={currency}
             onValueChange={(val) => {
-              setCurrency(val);
+              setCurrency(val ?? 'USD');
               markChanged();
             }}
           >
