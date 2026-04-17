@@ -65,9 +65,12 @@ export function BoardControls({ filters, onFiltersChange, locations }: BoardCont
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Select value={filters.stage} onValueChange={handleStageChange}>
+      <Select
+        value={filters.stage === 'all' ? '' : filters.stage}
+        onValueChange={handleStageChange}
+      >
         <SelectTrigger className="w-36">
-          <SelectValue placeholder="Stage" />
+          <SelectValue placeholder="All Stages" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Stages</SelectItem>
@@ -79,9 +82,12 @@ export function BoardControls({ filters, onFiltersChange, locations }: BoardCont
         </SelectContent>
       </Select>
 
-      <Select value={filters.location} onValueChange={handleLocationChange}>
+      <Select
+        value={filters.location === 'all' ? '' : filters.location}
+        onValueChange={handleLocationChange}
+      >
         <SelectTrigger className="w-36">
-          <SelectValue placeholder="Location" />
+          <SelectValue placeholder="All Locations" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Locations</SelectItem>
@@ -93,9 +99,12 @@ export function BoardControls({ filters, onFiltersChange, locations }: BoardCont
         </SelectContent>
       </Select>
 
-      <Select value={filters.deadline} onValueChange={handleDeadlineChange}>
+      <Select
+        value={filters.deadline === 'all' ? '' : filters.deadline}
+        onValueChange={handleDeadlineChange}
+      >
         <SelectTrigger className="w-36">
-          <SelectValue placeholder="Deadline" />
+          <SelectValue placeholder="All Deadlines" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Deadlines</SelectItem>

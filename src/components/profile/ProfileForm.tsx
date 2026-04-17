@@ -1,5 +1,7 @@
 'use client';
 
+import { ExperienceSection } from './ExperienceSection';
+import { CareerPreferencesSection } from './CareerPreferencesSection';
 import { EducationSection } from './EducationSection';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -205,8 +207,14 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
         </div>
       </div>
 
+      {/* Experience Section — S2-016 */}
+      <ExperienceSection />
+
       {/* Education Section — S2-017 */}
       <EducationSection />
+
+      {/* Career Preferences Section — S2-019 */}
+      <CareerPreferencesSection />
 
       {/* Save Button */}
       <div className="flex items-center justify-end gap-4">
