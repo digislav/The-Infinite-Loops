@@ -15,7 +15,7 @@ export type Experience = {
 };
 
 // 1. GET ALL (Sorted by the user's preferred order)
-export async function getExperiences(userId: string) {
+export async function getExperience(userId: string) {
   const supabase = await createClient();
   return await supabase
     .from('experience')
@@ -34,22 +34,22 @@ export async function createExperience(userId: string, data: Partial<Experience>
     .single();
 }
 
-// 3. UPDATE
+// 3. UPDATE: Specifically targets one row
 export async function updateExperience(id: string, userId: string, updates: Partial<Experience>) {
   const supabase = await createClient();
   return await supabase
     .from('experience')
     .update(updates)
     .eq('id', id)
-    .eq('user_id', userId)
+    .eq('user_id', userId) // Security: check ownership
     .select()
     .single();
 }
 
-// 4. DELETE
+// 4. DELETE: Specifically targets one row
 export async function deleteExperience(id: string, userId: string) {
   const supabase = await createClient();
-  return await supabase.from('experience').delete().eq('id', id).eq('user_id', userId);
+  return await supabase.from('experience').delete().eq('id', id).eq('user_id', userId); // Security: check ownership
 }
 
 // 5. REORDER
