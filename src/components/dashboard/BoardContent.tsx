@@ -18,6 +18,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -110,6 +118,10 @@ export function BoardContent({
   const [sortField, setSortField] = useState<SortField>('title');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
+
+  const [pendingOutcome, setPendingOutcome] = useState<{ jobId: string; stage: PipelineStage } | null>(null);
+  const [modalOutcomeNotes, setModalOutcomeNotes] = useState('');
+  const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false);
 
   function handleSort(field: SortField) {
     if (sortField === field) {
@@ -218,6 +230,12 @@ export function BoardContent({
   }
 
   async function handleInlineStageUpdate(jobId: string, newStage: PipelineStage) {
+    if (['Rejected', 'Ghosted', 'Offer'].includes(newStage)) {
+      setPendingOutcome({ jobId, stage: newStage });
+      setModalOutcomeNotes('');
+      return;
+    }
+    
     try {
       const res = await fetch(`/api/jobs/${jobId}`, {
         method: 'PUT',
@@ -229,6 +247,29 @@ export function BoardContent({
       onJobsChanged?.();
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  async function submitOutcome() {
+    if (!pendingOutcome) return;
+    setIsSubmittingOutcome(true);
+    try {
+      const res = await fetch(`/api/jobs/${pendingOutcome.jobId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_stage: pendingOutcome.stage,
+          outcome_notes: modalOutcomeNotes || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to update outcome');
+      await fetchJobs();
+      onJobsChanged?.();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingOutcome(false);
+      setPendingOutcome(null);
     }
   }
 
@@ -519,6 +560,33 @@ export function BoardContent({
           onJobsChanged?.();
         }}
       />
+
+      <Dialog open={!!pendingOutcome} onOpenChange={(open) => !open && setPendingOutcome(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Outcome Notes</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 py-4">
+            <p className="text-sm text-gray-500">
+              You are moving this job to <strong className="text-gray-900">{pendingOutcome?.stage}</strong>. Would you like to record any final notes?
+            </p>
+            <div className="grid w-full items-center gap-1.5">
+              <Label htmlFor="inlineOutcomeNotes" className="font-semibold text-gray-700">Notes (Optional)</Label>
+              <textarea
+                id="inlineOutcomeNotes"
+                value={modalOutcomeNotes}
+                onChange={(e) => setModalOutcomeNotes(e.target.value)}
+                placeholder={pendingOutcome?.stage === 'Offer' ? "What are the offer details? e.g. $120k / Remote" : `Why did they mark you as ${pendingOutcome?.stage}?`}
+                className="mt-1.5 flex min-h-[80px] w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingOutcome(null)}>Cancel</Button>
+            <Button onClick={submitOutcome} disabled={isSubmittingOutcome}>Save Outcome</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={!!jobToDelete}

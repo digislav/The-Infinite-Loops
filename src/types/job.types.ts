@@ -27,6 +27,8 @@ export interface JobRecord {
   application_date?: string;
   recruiter_notes?: string;
   custom_notes?: string;
+  recruiter_contact_notes?: string;
+  outcome_notes?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -42,6 +44,8 @@ export interface Job {
   lastActivityDate: string;
   deadline?: string;
   priorityFlag?: boolean;
+  recruiterContactNotes?: string;
+  outcomeNotes?: string;
 }
 
 // Extended UI shape for the job detail panel — S2-005.
@@ -55,6 +59,7 @@ export interface JobDetail extends Job {
   recruiterNotes?: string;
   customNotes?: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 // Convert a DB record to the base Job UI shape.
@@ -69,6 +74,8 @@ export function toUIJob(record: JobRecord): Job {
     lastActivityDate: record.last_activity_date ?? '',
     deadline: record.deadline,
     priorityFlag: record.is_priority,
+    recruiterContactNotes: record.recruiter_contact_notes,
+    outcomeNotes: record.outcome_notes,
   };
 }
 
@@ -87,5 +94,6 @@ export function toUIJobDetail(record: JobRecord): JobDetail {
     recruiterNotes: record.recruiter_notes ?? undefined,
     customNotes: record.custom_notes ?? undefined,
     createdAt: record.created_at ?? undefined,
+    updatedAt: record.updated_at ?? undefined,
   };
 }
