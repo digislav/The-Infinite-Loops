@@ -177,7 +177,7 @@ export function ExperienceSection() {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`/api/experience/${record.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/experiences/${record.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
       setExperiences((prev) => prev.filter((e) => e.id !== record.id));
     } catch {
