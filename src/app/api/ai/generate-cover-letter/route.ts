@@ -104,6 +104,9 @@ Write the cover letter now:
     if (!geminiRes.ok) {
       const errBody = await geminiRes.text();
       console.error('Gemini API error', { status: geminiRes.status, body: errBody });
+      if (geminiRes.status === 503) {
+        return apiError('AI_UNAVAILABLE', 503);
+      }
       return apiError('AI_GENERATION_FAILED', 500);
     }
 

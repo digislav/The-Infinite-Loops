@@ -88,14 +88,18 @@ export function CoverLetterGenerator() {
         body: JSON.stringify({ jobId: selectedJobId }),
       });
 
+      const resJson = await res.json();
+
       if (!res.ok) {
-        // Human-friendly error — never raw HTTP codes per S1-001 §6.3.
+        if (resJson.error?.code === 'AI_UNAVAILABLE') {
+          setError('AI services are currently experiencing high demand. Please try again later.');
+          return;
+        }
         setError('Failed to generate cover letter. Please try again.');
         return;
       }
 
-      const json = await res.json();
-      setDraft(json.data?.draft ?? '');
+      setDraft(resJson.data?.draft ?? '');
     } catch {
       setError('Failed to generate cover letter. Please try again.');
     } finally {
