@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { formatDateOnly } from '@/lib/utils/dateFormatters';
+import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
 import type { PipelineStage } from '@/types/job.types';
 
 // Shape of a single activity record from the API.
@@ -53,7 +53,13 @@ const stageStyles: Record<string, string> = {
 // ActivityIcon — renders a small coloured dot indicating the activity type.
 // Uses simple colour coding so the timeline is scannable at a glance.
 // Per S1-002 §5.5 — status indicators use consistent colour tokens.
-function ActivityIcon({ type, completed }: { type: JobActivity['activity_type']; completed?: boolean }) {
+function ActivityIcon({
+  type,
+  completed,
+}: {
+  type: JobActivity['activity_type'];
+  completed?: boolean;
+}) {
   return (
     <div
       className={cn(
@@ -141,7 +147,7 @@ function ActivityItem({
 
         {activity.activity_type === 'INTERVIEW_SCHEDULED' && activity.interview_date && (
           <p className="text-xs text-gray-500">
-            Scheduled: {formatDateOnly(activity.interview_date)}
+            Scheduled: {formatTimestamp(activity.interview_date)}
           </p>
         )}
 
@@ -163,7 +169,7 @@ function ActivityItem({
           </div>
         )}
 
-        <span className="text-xs text-gray-400">{formatDateOnly(activity.activity_date)}</span>
+        <span className="text-xs text-gray-400">{formatTimestamp(activity.activity_date)}</span>
       </div>
     </div>
   );
@@ -268,14 +274,11 @@ export function JobActivityTimeline({ jobId, refreshKey }: JobActivityTimelinePr
             activity={activity}
             onToggleReminder={async (activityToUpdate, completed) => {
               try {
-                const res = await fetch(
-                  `/api/jobs/${jobId}/activities/${activityToUpdate.id}`,
-                  {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ is_completed: completed }),
-                  },
-                );
+                const res = await fetch(`/api/jobs/${jobId}/activities/${activityToUpdate.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ is_completed: completed }),
+                });
 
                 if (!res.ok) {
                   throw new Error('Failed to update reminder.');
@@ -288,9 +291,7 @@ export function JobActivityTimeline({ jobId, refreshKey }: JobActivityTimelinePr
 
                 setActivities((current) =>
                   current.map((item) =>
-                    item.id === activityToUpdate.id
-                      ? { ...item, is_completed: completed }
-                      : item,
+                    item.id === activityToUpdate.id ? { ...item, is_completed: completed } : item,
                   ),
                 );
               } catch {

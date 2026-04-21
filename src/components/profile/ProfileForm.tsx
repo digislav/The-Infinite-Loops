@@ -1,10 +1,13 @@
 'use client';
 
+import { ExperienceSection } from './ExperienceSection';
+import { CareerPreferencesSection } from './CareerPreferencesSection';
+import { EducationSection } from './EducationSection';
+import { SkillsSection } from './SkillsSection';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import type { Profile } from '@/types/profile.types';
 import { calculateCompletion } from '@/types/profile.types';
 import { CompletionIndicator } from './CompletionIndicator';
@@ -203,6 +206,18 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
           />
         </div>
       </div>
+
+      {/* Experience Section — S2-016 */}
+      <ExperienceSection />
+
+      {/* Education Section — S2-017 */}
+      <EducationSection />
+
+      {/* Skills Section — S2-018 */}
+      <SkillsSection />
+
+      {/* Career Preferences Section — S2-019 */}
+      <CareerPreferencesSection />
 
       {/* Save Button */}
       <div className="flex items-center justify-end gap-4">

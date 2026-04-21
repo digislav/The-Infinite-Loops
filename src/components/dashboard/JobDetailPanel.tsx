@@ -20,7 +20,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Flag, MapPin, Building2, CalendarClock, Pencil, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatDateOnly } from '@/lib/utils/dateFormatters';
+import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
 import type { JobDetail, PipelineStage } from '@/types/job.types';
 
 // Pipeline stage colour tokens — per S1-002 §4.5.
@@ -88,6 +88,7 @@ export function JobDetailPanel({
   const [compensationNotes, setCompensationNotes] = useState('');
   const [recruiterNotes, setRecruiterNotes] = useState('');
   const [customNotes, setCustomNotes] = useState('');
+  const [outcomeNotes, setOutcomeNotes] = useState('');
 
   useEffect(() => {
     if (job) {
@@ -101,6 +102,7 @@ export function JobDetailPanel({
       setCompensationNotes(job.compensationNotes ?? '');
       setRecruiterNotes(job.recruiterNotes ?? '');
       setCustomNotes(job.customNotes ?? '');
+      setOutcomeNotes(job.outcomeNotes ?? '');
     }
     if (!isOpen) {
       setIsEditing(false);
@@ -125,6 +127,7 @@ export function JobDetailPanel({
         compensation_notes: compensationNotes || undefined,
         recruiter_notes: recruiterNotes || undefined,
         custom_notes: customNotes || undefined,
+        outcome_notes: outcomeNotes || undefined,
       };
 
       // user_id is never included in the payload — the backend uses
@@ -148,6 +151,7 @@ export function JobDetailPanel({
         compensationNotes,
         recruiterNotes,
         customNotes,
+        outcomeNotes,
       });
 
       setIsEditing(false);
@@ -309,6 +313,25 @@ export function JobDetailPanel({
                   {job.pipelineStage}
                 </Badge>
               )}
+              {/* Dynamically reveal Outcome Notes if stage is marked as complete */}
+              {isEditing && ['Rejected', 'Ghosted', 'Offer'].includes(pipelineStage) && (
+                <div className="animate-in fade-in slide-in-from-top-2 mt-3 rounded-md border border-gray-100 bg-gray-50 p-3">
+                  <Label htmlFor="outcomeNotes" className="text-sm font-semibold text-gray-700">
+                    Outcome Notes (Optional)
+                  </Label>
+                  <textarea
+                    id="outcomeNotes"
+                    value={outcomeNotes}
+                    onChange={(e) => setOutcomeNotes(e.target.value)}
+                    placeholder={
+                      pipelineStage === 'Offer'
+                        ? 'What are the offer details? e.g. $120k / Remote'
+                        : `Why did they mark you as ${pipelineStage}?`
+                    }
+                    className="mt-1.5 flex min-h-[60px] w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:outline-none"
+                  />
+                </div>
+              )}
             </DialogHeader>
 
             {/* CORE INFO — company, location, last activity, deadline */}
@@ -349,11 +372,24 @@ export function JobDetailPanel({
                 )
               )}
 
+              {/* OUTCOME NOTES BLOCK - Read Only rendering */}
+              {!isEditing && job.outcomeNotes && (
+                <div className="relative mb-2 rounded-lg border border-slate-100 bg-slate-50 p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-sm bg-slate-200">
+                      <Flag size={14} className="text-slate-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Final Outcome Notes</h3>
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap text-gray-700">{job.outcomeNotes}</p>
+                </div>
+              )}
+
               {/* Last activity date — always shown in read mode */}
               {job.lastActivityDate && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <CalendarClock size={15} aria-hidden={true} />
-                  <span>Last activity: {formatDateOnly(job.lastActivityDate)}</span>
+                  <span>Last activity: {formatTimestamp(job.lastActivityDate)}</span>
                 </div>
               )}
 
