@@ -17,8 +17,8 @@ export default function DocumentsPage() {
       </div>
 
       {/* Cover Letter Generator — S2-022 */}
-      <div className="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 print:hidden">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 print:m-0 print:p-0 print:border-none print:shadow-none">
+        <div className="flex flex-col gap-1 print:hidden">
           <h2 className="text-xl font-semibold text-gray-900">Cover Letter Generator</h2>
           <p className="text-sm text-gray-500">
             Select a job from your pipeline and we will generate a tailored cover letter using your
