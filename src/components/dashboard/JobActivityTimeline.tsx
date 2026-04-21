@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { formatDateOnly } from '@/lib/utils/dateFormatters';
+import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
 import type { PipelineStage } from '@/types/job.types';
 
 // Shape of a single activity record from the API.
@@ -109,12 +109,12 @@ function ActivityItem({ activity }: { activity: JobActivity }) {
         {/* Interview date — shown for interview events if set */}
         {activity.activity_type === 'INTERVIEW_SCHEDULED' && activity.interview_date && (
           <p className="text-xs text-gray-500">
-            Scheduled: {formatDateOnly(activity.interview_date)}
+            Scheduled: {formatTimestamp(activity.interview_date)}
           </p>
         )}
 
         {/* Activity date — when the event was recorded */}
-        <span className="text-xs text-gray-400">{formatDateOnly(activity.activity_date)}</span>
+        <span className="text-xs text-gray-400">{formatTimestamp(activity.activity_date)}</span>
       </div>
     </div>
   );

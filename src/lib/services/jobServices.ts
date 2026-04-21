@@ -125,6 +125,18 @@ export async function createJob(userId: string, jobData: Partial<Job>) {
 export async function updateJob(id: string, userId: string, updates: Partial<Job>) {
   const supabase = await createClient();
 
+  // Update last_activity_date whenever the stage or notes change
+  // so the dashboard always shows the correct last activity date.
+  if (
+    updates.current_stage ||
+    updates.recruiter_notes !== undefined ||
+    updates.custom_notes !== undefined ||
+    updates.description !== undefined ||
+    updates.compensation_notes !== undefined
+  ) {
+    updates.last_activity_date = new Date().toISOString();
+  }
+
   // Perform the job update first — ownership enforced here.
   // If this user doesn't own the job the update returns no rows
   // and we skip activity recording entirely.
