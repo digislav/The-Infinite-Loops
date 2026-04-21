@@ -1,4 +1,11 @@
-export default function SettingsPage() {
+import { createClient } from '@/lib/supabase/server';
+import { UpdateEmailDialog } from '@/components/settings/UpdateEmailDialog';
+import { UpdatePasswordDialog } from '@/components/settings/UpdatePasswordDialog';
+
+export default async function SettingsPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const currentEmail = user?.email || 'Loading...';
   return (
     <div className="mx-auto max-w-2xl">
       {/* Page Header */}
@@ -17,7 +24,7 @@ export default function SettingsPage() {
               <p className="text-foreground text-sm font-medium">Email Address</p>
               <p className="text-muted-foreground mt-1 text-sm">Update your email address</p>
             </div>
-            <button className="text-primary text-sm font-medium hover:underline">Change</button>
+            <UpdateEmailDialog currentEmail={currentEmail} />
           </div>
 
           {/* Password */}
@@ -26,7 +33,7 @@ export default function SettingsPage() {
               <p className="text-foreground text-sm font-medium">Password</p>
               <p className="text-muted-foreground mt-1 text-sm">Update your password</p>
             </div>
-            <button className="text-primary text-sm font-medium hover:underline">Change</button>
+            <UpdatePasswordDialog currentEmail={currentEmail} />
           </div>
         </div>
       </div>
