@@ -19,7 +19,11 @@ CREATE TABLE IF NOT EXISTS jobs (
   custom_notes        TEXT,
 
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  -- Archival Data
+  is_archived         BOOLEAN DEFAULT FALSE,
+  last_status_before_archive TEXT;
 );
 
 CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(user_id);

@@ -45,9 +45,21 @@ export type JobActivity = {
 };
 
 // 1. GET ALL
-export async function getJobs(userId: string, filters?: { status?: string; deadline?: string }) {
+// Ownership enforced via .eq('user_id', userId) per S1-003 §5.2.
+export async function getJobs(
+  userId: string,
+  filters?: { status?: string; deadline?: string; showArchived?: boolean; all?: boolean },
+) {
   const supabase = await createClient();
   let query = supabase.from('jobs').select('*').eq('user_id', userId);
+
+  if (filters?.all) {
+    // Return all jobs including archived — used by StatsBar for accurate counts.
+  } else if (filters?.status === 'Archived' || filters?.showArchived) {
+    query = query.eq('is_archived', true);
+  } else {
+    query = query.eq('is_archived', false);
+  }
 
   if (filters?.status) {
     query = query.eq('current_stage', filters.status);
@@ -61,12 +73,16 @@ export async function getJobs(userId: string, filters?: { status?: string; deadl
 }
 
 // 2. GET SINGLE
+// Ownership enforced via .eq('user_id', userId) per S1-003 §5.2.
+// Returns null for non-owners — route handler returns 404 per S1-003 §5.5.
 export async function getJobById(id: string, userId: string) {
   const supabase = await createClient();
   return await supabase.from('jobs').select('*').eq('id', id).eq('user_id', userId).single();
 }
 
 // 3. CREATE
+// user_id always comes from the session (passed in by the route handler) —
+// never from the request body per S1-003 §5.4.
 export async function createJob(userId: string, jobData: Partial<Job>) {
   const supabase = await createClient();
 
@@ -83,7 +99,8 @@ export async function createJob(userId: string, jobData: Partial<Job>) {
   if (jobError) throw jobError;
 
   // Record the initial stage as the first activity event.
-  // This gives the timeline a starting point for every new job.
+  // Only inserted after the job insert succeeds — prevents orphaned
+  // activity records if the job insert fails.
   if (newJob) {
     try {
       await supabase.from('job_activities').insert({
@@ -102,82 +119,131 @@ export async function createJob(userId: string, jobData: Partial<Job>) {
 }
 
 // 4. UPDATE
+// Ownership enforced via .eq('user_id', userId) on the jobs update.
+// Activity recording happens AFTER the update succeeds — this prevents
+// orphaned activity records if the update fails or the job doesn't
+// belong to this user per S1-003 §5.2.
 export async function updateJob(id: string, userId: string, updates: Partial<Job>) {
   const supabase = await createClient();
 
-  // Record a STAGE_CHANGE activity only when the stage actually changed.
-  // Per S2-009 — stage transitions are recorded with timestamps.
-  // We only record this when current_stage is in the payload, which
-  // JobDetailPanel.tsx only includes when the stage actually changed.
-  if (updates.current_stage) {
-    try {
-      await supabase.from('job_activities').insert({
-        job_id: id,
-        activity_type: 'STAGE_CHANGE',
-        timeline_event_type: updates.current_stage,
-        notes: `Transitioned to ${updates.current_stage}`,
-        activity_date: new Date().toISOString(),
-      });
-      updates.last_activity_date = new Date().toISOString();
-    } catch (err) {
-      console.error('Non-fatal: Update activity failed:', err);
-    }
-  }
-
-  // Record a NOTE_ADDED activity when any note or description field is updated.
-  // This makes note changes visible in the activity timeline per S2-010.
-  // We check for undefined rather than falsy so that clearing a note
-  // (empty string) also gets recorded as a note update.
+  // Update last_activity_date whenever the stage or notes change
+  // so the dashboard always shows the correct last activity date.
   if (
+    updates.current_stage ||
     updates.recruiter_notes !== undefined ||
     updates.custom_notes !== undefined ||
     updates.description !== undefined ||
     updates.compensation_notes !== undefined
   ) {
-    try {
-      await supabase.from('job_activities').insert({
-        job_id: id,
-        activity_type: 'NOTE_ADDED',
-        notes: 'Notes updated',
-        activity_date: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.error('Non-fatal: Note activity creation failed:', err);
-    }
+    updates.last_activity_date = new Date().toISOString();
   }
 
-  return await supabase
+  // Perform the job update first — ownership enforced here.
+  // If this user doesn't own the job the update returns no rows
+  // and we skip activity recording entirely.
+  const result = await supabase
     .from('jobs')
     .update(updates)
     .eq('id', id)
     .eq('user_id', userId)
     .select()
     .single();
+
+  // Only record activities if the update actually succeeded.
+  // Per S1-003 §5.2 — we never write child records for jobs
+  // the user doesn't own.
+  if (result.data) {
+    // Record a STAGE_CHANGE activity if the stage changed.
+    // Per S2-009 — stage transitions are recorded with timestamps.
+    if (updates.current_stage) {
+      try {
+        await supabase.from('job_activities').insert({
+          job_id: id,
+          activity_type: 'STAGE_CHANGE',
+          timeline_event_type: updates.current_stage,
+          notes: `Transitioned to ${updates.current_stage}`,
+          activity_date: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error('Non-fatal: Stage activity recording failed:', err);
+      }
+    }
+
+    // Record a NOTE_ADDED activity if any note field was updated.
+    // This makes note changes visible as gray dots in the timeline
+    // per S2-010. We check for undefined rather than falsy so that
+    // clearing a note (empty string) also gets recorded.
+    if (
+      updates.recruiter_notes !== undefined ||
+      updates.custom_notes !== undefined ||
+      updates.description !== undefined ||
+      updates.compensation_notes !== undefined
+    ) {
+      try {
+        await supabase.from('job_activities').insert({
+          job_id: id,
+          activity_type: 'NOTE_ADDED',
+          notes: 'Notes updated',
+          activity_date: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error('Non-fatal: Note activity recording failed:', err);
+      }
+    }
+  }
+
+  return result;
 }
 
 // 5. DELETE
+// Ownership enforced via .eq('user_id', userId) per S1-003 §5.2.
 export async function deleteJob(id: string, userId: string) {
   const supabase = await createClient();
   return await supabase.from('jobs').delete().eq('id', id).eq('user_id', userId);
 }
 
 // GET interviews — fetches only INTERVIEW_SCHEDULED events for a job.
-// Used by the interviews route handler (S2-011).
-export async function getInterviewsByJob(jobId: string) {
+// S2-011 fix: ownership enforced through parent job join per S1-003 §4.3.
+// Previously this function had no ownership check — any job ID could be
+// passed and activities for jobs the user doesn't own would be returned.
+export async function getInterviewsByJob(jobId: string, userId: string) {
   const supabase = await createClient();
   return await supabase
     .from('job_activities')
-    .select('*')
+    .select('*, jobs!inner(user_id)')
     .eq('job_id', jobId)
+    // Ownership enforced through parent job — per S1-003 §4.3.
+    .eq('jobs.user_id', userId)
     .eq('activity_type', 'INTERVIEW_SCHEDULED')
     .order('interview_date', { ascending: true });
 }
 
 // POST interview — saves a new interview event for a job.
-// Also automatically appears in the activity timeline since it uses
-// the INTERVIEW_SCHEDULED activity type per S2-010.
+// S2-011 fix: ownership of the parent job is verified before inserting.
+// Previously this function accepted any jobId without verifying the
+// caller owns that job — relying solely on RLS as the only guard.
+// Per S1-003 §5.2 — ownership must be verified at the service layer.
 export async function addInterview(userId: string, jobId: string, data: Partial<JobActivity>) {
   const supabase = await createClient();
+
+  // Step 1: Verify the caller owns the parent job before inserting.
+  // Per S1-003 §4.3 — child entity ownership verified through parent.
+  // Returns null if the job doesn't exist or belongs to another user.
+  const { data: job } = await supabase
+    .from('jobs')
+    .select('id')
+    .eq('id', jobId)
+    .eq('user_id', userId)
+    .single();
+
+  // Step 2: Return a safe error if ownership check fails.
+  // Per S1-003 §5.5 — never expose whether the resource exists to
+  // non-owners. The route handler will return 404.
+  if (!job) {
+    return { data: null, error: { message: 'Job not found or not owned by user' } };
+  }
+
+  // Step 3: Insert the interview activity now that ownership is confirmed.
   return await supabase
     .from('job_activities')
     .insert({

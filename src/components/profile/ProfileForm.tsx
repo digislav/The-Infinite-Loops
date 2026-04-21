@@ -1,5 +1,9 @@
 'use client';
 
+import { ExperienceSection } from './ExperienceSection';
+import { CareerPreferencesSection } from './CareerPreferencesSection';
+import { EducationSection } from './EducationSection';
+import { SkillsSection } from './SkillsSection';
 import { useState } from 'react';
 import type { Profile } from '@/types/profile.types';
 import { calculateCompletion } from '@/types/profile.types';
@@ -42,7 +46,6 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Completion Indicator */}
       <CompletionIndicator percentage={completion} />
 
       {globalError && (
@@ -51,11 +54,12 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
         </div>
       )}
 
-      {/* Personal Information Section */}
       <PersonalInfoSection initialData={profile} onSave={handleSectionSave} />
-
-      {/* Professional Summary Section */}
       <ProfessionalSummarySection initialData={profile} onSave={handleSectionSave} />
+      <ExperienceSection />
+      <EducationSection />
+      <SkillsSection />
+      <CareerPreferencesSection />
     </div>
   );
 }
