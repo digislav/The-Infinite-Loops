@@ -10,6 +10,7 @@ export async function POST(req: Request) {
   try {
     const supabase = await createClient();
 
+    // Step 1: Verify the session — first action per S1-003 §2.3.
     const {
       data: { user },
       error: authError,
@@ -22,19 +23,16 @@ export async function POST(req: Request) {
 
     if (!jobId) return apiError('JOB_ID_REQUIRED', 400);
 
-    const [
-      profileResult,
-      jobResult,
-      experienceResult,
-      educationResult,
-      skillsResult,
-    ] = await Promise.all([
-      getProfile(user.id),
-      getJobById(jobId, user.id),
-      getExperience(user.id),
-      getEducation(user.id),
-      getSkills(user.id),
-    ]);
+    // Step 2: Fetch all required data server-side using the verified session.
+    // Per S1-003 §5.4 — user_id always sourced from session, never body.
+    const [profileResult, jobResult, experienceResult, educationResult, skillsResult] =
+      await Promise.all([
+        getProfile(user.id),
+        getJobById(jobId, user.id),
+        getExperience(user.id),
+        getEducation(user.id),
+        getSkills(user.id),
+      ]);
 
     if (profileResult.error || !profileResult.data) {
       return apiError('PROFILE_NOT_FOUND', 404);
@@ -49,11 +47,13 @@ export async function POST(req: Request) {
     const education = educationResult.data || [];
     const skills = skillsResult.data || [];
 
-    // Explicitly block AI hallucination loops when there is literally zero data available natively.
+    // Block generation when there is no profile data to work with.
     if (experiences.length === 0 && education.length === 0 && skills.length === 0) {
       return apiError('INSUFFICIENT_CONTEXT', 400);
     }
 
+    // Step 3: Build the prompt for Gemini server-side.
+    // Per S1-004 — prompts must be structured and reviewable.
     const prompt = `
 You are a professional resume writer helping a job seeker tailor their resume to a specific job description.
 
@@ -107,7 +107,7 @@ Raw Experiences:
 ${experiences.map((exp) => `- ${exp.role_title} at ${exp.company_name} (${exp.start_date} to ${exp.is_current ? 'Present' : exp.end_date}): ${exp.description || ''}`).join('\n')}
 
 Raw Education:
-${education.map((edu) => `- ${edu.degree} in ${edu.field_of_study} from ${edu.institution} (${edu.start_date || 'N/A'} to ${edu.is_current ? 'Present' : (edu.end_date || 'N/A')})`).join('\n')}
+${education.map((edu) => `- ${edu.degree} in ${edu.field_of_study} from ${edu.institution} (${edu.start_date || 'N/A'} to ${edu.is_current ? 'Present' : edu.end_date || 'N/A'})`).join('\n')}
 
 Raw Skills: 
 ${skills.map((skill) => skill.skill_name).join(', ')}
@@ -120,6 +120,8 @@ Description: ${job.description || ''}
 Remember: Return ONLY a raw JSON object string.
     `.trim();
 
+    // Step 4: Call the Gemini API.
+    // Per S1-003 §8.1 — API keys must never be exposed to the browser.
     const geminiApiKey = process.env.GEMINI_API_KEY;
     const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
@@ -136,8 +138,8 @@ Remember: Return ONLY a raw JSON object string.
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            responseMimeType: "application/json"
-          }
+            responseMimeType: 'application/json',
+          },
         }),
       },
     );
@@ -145,7 +147,7 @@ Remember: Return ONLY a raw JSON object string.
     if (!geminiRes.ok) {
       const errBody = await geminiRes.text();
       console.error('Gemini API error', { status: geminiRes.status, body: errBody });
-      if (geminiRes.status === 503) {
+      if (geminiRes.status === 503 || geminiRes.status === 429) {
         return apiError('AI_UNAVAILABLE', 503);
       }
       return apiError('AI_GENERATION_FAILED', 500);
@@ -158,13 +160,14 @@ Remember: Return ONLY a raw JSON object string.
       return apiError('AI_GENERATION_FAILED', 500);
     }
 
-    // Parse it to make sure Gemini respected the JSON output
     let parsedData = {};
     try {
       parsedData = JSON.parse(generatedText);
     } catch {
-      // Clean up markdown block if gemini hallucinated despite mimeType
-      const cleaned = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const cleaned = generatedText
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
       parsedData = JSON.parse(cleaned);
     }
 

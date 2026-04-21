@@ -1,21 +1,62 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatTimestamp } from '@/lib/utils/dateFormatters';
 
 interface ReminderSectionProps {
   jobId: string;
   onReminderSaved: () => void;
 }
 
+interface Reminder {
+  id: string;
+  notes?: string;
+  interview_date?: string;
+  activity_date: string;
+  activity_type: string;
+  timeline_event_type?: string;
+}
+
 export function ReminderSection({ jobId, onReminderSaved }: ReminderSectionProps) {
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [reminderDate, setReminderDate] = useState('');
   const [notes, setNotes] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Fetch activities on mount and filter to REMINDER type only.
+  // Auth and ownership enforced server-side per S1-003 §5.4.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadReminders = async () => {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/activities`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const all = json.data ?? [];
+        // Filter to only REMINDER type activities.
+        if (!cancelled) {
+          setReminders(all.filter((a: Reminder) => a.activity_type === 'REMINDER'));
+        }
+      } catch {
+        // Silently fail — reminders list just stays empty.
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadReminders();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
 
   function resetForm() {
     setReminderDate('');
@@ -33,7 +74,6 @@ export function ReminderSection({ jobId, onReminderSaved }: ReminderSectionProps
       setFormError('Please select a reminder date and time.');
       return;
     }
-
     setIsSaving(true);
     setFormError(null);
 
@@ -53,6 +93,9 @@ export function ReminderSection({ jobId, onReminderSaved }: ReminderSectionProps
         return;
       }
 
+      // Add the new reminder to the local list immediately.
+      const saved: Reminder = json.data;
+      setReminders((prev) => [saved, ...prev]);
       setIsAdding(false);
       resetForm();
       onReminderSaved();
@@ -64,73 +107,100 @@ export function ReminderSection({ jobId, onReminderSaved }: ReminderSectionProps
   }
 
   return (
-    <div className="mt-5 border-b border-gray-100 pb-5">
+    <div className="flex flex-col gap-3">
+      {/* Section header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700">Follow-up Reminder</h3>
-          <p className="text-sm text-gray-400">Keep track of your next follow-up for this job.</p>
-        </div>
+        <h3 className="text-sm font-semibold text-gray-700">Follow-ups & Reminders</h3>
         {!isAdding && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsAdding(true)}
-            className="h-7 rounded-full bg-amber-50 px-3 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+            onClick={() => {
+              setIsAdding(true);
+              setFormError(null);
+            }}
+            className="h-7 rounded-full bg-blue-50 px-3 text-xs font-semibold text-blue-600"
           >
             + Add Reminder
           </Button>
         )}
       </div>
 
+      {/* Add form */}
       {isAdding && (
-        <div className="mt-4 flex flex-col gap-3 rounded-lg border border-amber-100 bg-amber-50/50 p-4">
+        <div className="flex flex-col gap-3 rounded-lg border border-blue-100 bg-blue-50/50 p-3">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="reminder-date" className="text-xs text-gray-500">
-              Date & Time <span className="text-red-500">*</span>
+            <Label htmlFor="reminder-date" className="text-xs text-gray-600">
+              Reminder Date & Time <span className="text-red-500">*</span>
             </Label>
             <Input
               id="reminder-date"
               type="datetime-local"
               value={reminderDate}
-              onChange={(e) => setReminderDate(e.target.value)}
-              className="h-8 text-xs"
+              onChange={(e) => {
+                setReminderDate(e.target.value);
+                setFormError(null);
+              }}
+              className="text-sm"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="reminder-notes" className="text-xs text-gray-500">
-              Notes <span className="text-gray-400">(optional)</span>
+            <Label htmlFor="reminder-notes" className="text-xs text-gray-600">
+              Notes <span className="text-xs text-gray-400">(optional)</span>
             </Label>
-            <textarea
+            <Input
               id="reminder-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Why are you following up?"
-              className="min-h-[60px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs placeholder:text-gray-400 focus:border-[#2E75B6] focus:ring-2 focus:ring-[#2E75B6]/50 focus:outline-none"
+              placeholder="e.g. Send thank you email, Follow up if no response"
+              className="text-sm"
             />
           </div>
 
           {formError && <p className="text-xs text-red-600">{formError}</p>}
 
           <div className="flex justify-end gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              disabled={isSaving}
-              className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
-            >
+            <Button variant="ghost" size="sm" onClick={handleCancel} className="text-xs">
               Cancel
             </Button>
             <Button
               size="sm"
               onClick={handleSave}
               disabled={isSaving}
-              className="h-7 bg-[#2E75B6] px-3 text-xs font-semibold text-white hover:bg-[#1F4E79]"
+              className="bg-[#2E75B6] text-xs text-white hover:bg-[#1F4E79] disabled:opacity-50"
             >
               {isSaving ? 'Saving...' : 'Save Reminder'}
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Reminders list */}
+      {loading ? (
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+        </div>
+      ) : reminders.length === 0 && !isAdding ? (
+        <p className="text-xs text-gray-400">No reminders yet.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {reminders.map((reminder) => (
+            <div
+              key={reminder.id}
+              className="flex flex-col gap-0.5 rounded-lg border border-gray-100 bg-white px-3 py-2"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-blue-600">
+                  {reminder.interview_date
+                    ? formatTimestamp(reminder.interview_date)
+                    : formatTimestamp(reminder.activity_date)}
+                </span>
+              </div>
+              {reminder.notes && <span className="text-xs text-gray-600">{reminder.notes}</span>}
+            </div>
+          ))}
         </div>
       )}
     </div>

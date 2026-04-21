@@ -62,7 +62,7 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     }
 
     // 204 No Content — per S1-001 §7.2 successful DELETE returns 204.
-    return apiSuccess(null, 204);
+    return apiSuccess({ deleted: true });
   } catch (error) {
     console.error('DELETE /api/profile/education/[id] unexpected failure', { error });
     return apiError('INTERNAL_ERROR', 500);

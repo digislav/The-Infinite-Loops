@@ -1,11 +1,13 @@
 'use client';
 
-// CoverLetterGenerator — S2-022 + S2-023.
+// CoverLetterGenerator — S2-022 + S2-023 + S2-024.
 // S2-022: Generates a tailored cover letter draft using the user's
 // profile data and a selected job via the Gemini AI API.
 // S2-023: Adds rewrite/improve actions so users can refine the draft
 // with a custom instruction (e.g. "make it more concise", "add more
 // technical detail", "make the tone more formal").
+// S2-024: Adds save draft functionality so users can persist generated
+// cover letters linked to job context.
 //
 // Per S1-004 — AI-generated content is clearly labelled as a draft.
 // Per S1-002 §5.3 — uses controlled inputs throughout.
@@ -75,7 +77,13 @@ const PRESET_INSTRUCTIONS = [
   { label: 'Custom instruction...', value: 'custom' },
 ];
 
-export function CoverLetterGenerator() {
+interface CoverLetterGeneratorProps {
+  // S2-024: Called after a successful save so the parent can refresh
+  // the saved documents list.
+  onSaved?: () => void;
+}
+
+export function CoverLetterGenerator({ onSaved }: CoverLetterGeneratorProps) {
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState('');
@@ -89,6 +97,10 @@ export function CoverLetterGenerator() {
   const [customInstruction, setCustomInstruction] = useState('');
   const [isRewriting, setIsRewriting] = useState(false);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
+
+  // S2-024: Save state
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Fetch the user's jobs on mount to populate the job selector.
   // Auth and ownership enforced server-side per S1-003 §5.4.
@@ -131,6 +143,7 @@ export function CoverLetterGenerator() {
     setSelectedPreset('');
     setCustomInstruction('');
     setRewriteError(null);
+    setSaveStatus('idle');
 
     try {
       const res = await fetch('/api/ai/generate-cover-letter', {
@@ -168,7 +181,6 @@ export function CoverLetterGenerator() {
   // instruction to the backend. Only the draft text and instruction
   // are sent — no profile data or user_id per S1-003 §5.4.
   async function handleRewrite() {
-    // Determine the instruction — either preset or custom.
     const instruction = selectedPreset === 'custom' ? customInstruction : selectedPreset;
 
     if (!instruction.trim()) {
@@ -184,26 +196,22 @@ export function CoverLetterGenerator() {
     setIsRewriting(true);
     setRewriteError(null);
     setCopied(false);
+    setSaveStatus('idle');
 
     try {
       const res = await fetch('/api/ai/rewrite-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Only send draft.body text and instruction — no user_id or profile data
-        // per S1-003 §5.4. Auth verified server-side via session.
         body: JSON.stringify({ draft: draft.body, instruction }),
       });
 
       if (!res.ok) {
-        // Human-friendly error per S1-001 §6.3.
         setRewriteError('Failed to rewrite draft. Please try again.');
         return;
       }
 
       const json = await res.json();
-      // Replace the draft body with the rewritten version.
       setDraft({ ...draft, body: json.data?.draft ?? draft.body });
-      // Reset the instruction fields after successful rewrite.
       setSelectedPreset('');
       setCustomInstruction('');
     } catch {
@@ -219,13 +227,57 @@ export function CoverLetterGenerator() {
     const fullText = `${draft.name}\n${draft.location}\n\n${draft.date}\n\n${draft.greeting}\n\n${draft.body}\n\n${draft.signoff}`;
     await navigator.clipboard.writeText(fullText);
     setCopied(true);
-    // Reset copied state after 2 seconds.
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  // handleSave — S2-024: saves the current draft as a document record.
+  // Only job_id, type, name, and content are sent — user_id comes from
+  // the session server-side per S1-003 §5.4.
+  async function handleSave() {
+    if (!draft || !selectedJobId) return;
+
+    setIsSaving(true);
+    setSaveStatus('idle');
+
+    try {
+      const job = jobs.find((j) => j.id === selectedJobId);
+      const title = job
+        ? `Cover Letter — ${job.job_title} at ${job.company_name}`
+        : 'Cover Letter Draft';
+
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Only send job_id, type, name, content — never user_id per S1-003 §5.4.
+        // Using 'name' to match the documents table column name.
+        body: JSON.stringify({
+          job_id: selectedJobId,
+          type: 'cover_letter',
+          name: title,
+          content: JSON.stringify(draft),
+        }),
+      });
+
+      if (!res.ok) {
+        setSaveStatus('error');
+        return;
+      }
+
+      setSaveStatus('success');
+      // Notify parent to refresh the saved documents list.
+      if (onSaved) onSaved();
+    } catch {
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function handlePrint() {
     const originalTitle = document.title;
-    document.title = draft?.name ? `${draft.name.replace(/\s+/g, '_')}_Cover_Letter` : 'Cover_Letter';
+    document.title = draft?.name
+      ? `${draft.name.replace(/\s+/g, '_')}_Cover_Letter`
+      : 'Cover_Letter';
     window.print();
     document.title = originalTitle;
   }
@@ -297,16 +349,15 @@ export function CoverLetterGenerator() {
       {/* DRAFT OUTPUT — shown after successful generation.
           Per S1-004 — clearly labelled as an AI-generated draft. */}
       {draft && !isGenerating && (
-        <div className="flex flex-col gap-4 mt-4 print:mt-0">
-          
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 p-4 print:hidden">
+        <div className="mt-4 flex flex-col gap-4 print:mt-0">
+          <div className="flex flex-col justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 p-4 sm:flex-row sm:items-center print:hidden">
             <div className="flex flex-col gap-0.5">
               <h3 className="text-sm font-semibold text-gray-700">AI-Generated Draft</h3>
               <p className="text-xs text-amber-600">
                 ⚠ Review and edit the body text below before printing or copying.
               </p>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -316,17 +367,30 @@ export function CoverLetterGenerator() {
               >
                 {copied ? '✓ Copied!' : 'Copy Text'}
               </Button>
+              {/* S2-024: Save Draft button */}
               <Button
-                onClick={handlePrint}
-                className="bg-black text-white hover:bg-gray-800"
+                variant="ghost"
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="h-9 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
               >
+                {isSaving
+                  ? 'Saving...'
+                  : saveStatus === 'success'
+                    ? '✓ Saved!'
+                    : saveStatus === 'error'
+                      ? 'Save Failed'
+                      : 'Save Draft'}
+              </Button>
+              <Button onClick={handlePrint} className="bg-black text-white hover:bg-gray-800">
                 Print / Save as PDF
               </Button>
             </div>
           </div>
 
           <div className="print:hidden">
-            <Label className="text-sm font-medium text-gray-700 mb-2 block">Edit Letter Body</Label>
+            <Label className="mb-2 block text-sm font-medium text-gray-700">Edit Letter Body</Label>
             <textarea
               value={draft.body}
               onChange={(e) => setDraft({ ...draft, body: e.target.value })}
@@ -407,36 +471,62 @@ export function CoverLetterGenerator() {
               </Button>
             </div>
 
-            {isRewriting && <p className="text-xs text-gray-400">Refining your body paragraphs...</p>}
+            {isRewriting && (
+              <p className="text-xs text-gray-400">Refining your body paragraphs...</p>
+            )}
           </div>
 
-          <div 
+          <div
             id="cover-letter-print-canvas"
-            className="w-full bg-white border border-gray-300 shadow-sm p-12 min-h-[800px] text-gray-900 print:w-full print:border-none print:shadow-none"
+            className="min-h-[800px] w-full border border-gray-300 bg-white p-12 text-gray-900 shadow-sm print:w-full print:border-none print:shadow-none"
           >
-            <div className="flex flex-col gap-6 max-w-3xl mx-auto font-serif">
+            <div className="mx-auto flex max-w-3xl flex-col gap-6 font-serif">
               <div className="flex flex-col">
-                <h1 className="text-3xl font-bold uppercase tracking-wide">{draft.name}</h1>
-                <p className="text-sm mt-1">{draft.location}</p>
-                {draft.links && (draft.links.linkedin || draft.links.github || draft.links.portfolio) && (
-                    <div className="flex flex-wrap gap-4 mt-2 text-xs font-semibold text-[#2E75B6]">
-                      {draft.links.linkedin && draft.links.linkedin !== 'None' && <a href={draft.links.linkedin} target="_blank" rel="noreferrer" className="hover:underline">LinkedIn</a>}
-                      {draft.links.github && draft.links.github !== 'None' && <a href={draft.links.github} target="_blank" rel="noreferrer" className="hover:underline">GitHub</a>}
-                      {draft.links.portfolio && draft.links.portfolio !== 'None' && <a href={draft.links.portfolio} target="_blank" rel="noreferrer" className="hover:underline">Portfolio</a>}
+                <h1 className="text-3xl font-bold tracking-wide uppercase">{draft.name}</h1>
+                <p className="mt-1 text-sm">{draft.location}</p>
+                {draft.links &&
+                  (draft.links.linkedin || draft.links.github || draft.links.portfolio) && (
+                    <div className="mt-2 flex flex-wrap gap-4 text-xs font-semibold text-[#2E75B6]">
+                      {draft.links.linkedin && draft.links.linkedin !== 'None' && (
+                        <a
+                          href={draft.links.linkedin}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:underline"
+                        >
+                          LinkedIn
+                        </a>
+                      )}
+                      {draft.links.github && draft.links.github !== 'None' && (
+                        <a
+                          href={draft.links.github}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:underline"
+                        >
+                          GitHub
+                        </a>
+                      )}
+                      {draft.links.portfolio && draft.links.portfolio !== 'None' && (
+                        <a
+                          href={draft.links.portfolio}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:underline"
+                        >
+                          Portfolio
+                        </a>
+                      )}
                     </div>
-                )}
+                  )}
               </div>
-              
-              <div className="text-sm mt-8">{draft.date}</div>
-              
-              <div className="text-sm mt-8">{draft.greeting}</div>
-              
-              <div className="text-sm leading-loose whitespace-pre-wrap mt-2">{draft.body}</div>
-              
-              <div className="text-sm mt-6 whitespace-pre-wrap">{draft.signoff}</div>
+
+              <div className="mt-8 text-sm">{draft.date}</div>
+              <div className="mt-8 text-sm">{draft.greeting}</div>
+              <div className="mt-2 text-sm leading-loose whitespace-pre-wrap">{draft.body}</div>
+              <div className="mt-6 text-sm whitespace-pre-wrap">{draft.signoff}</div>
             </div>
           </div>
-
         </div>
       )}
     </div>
