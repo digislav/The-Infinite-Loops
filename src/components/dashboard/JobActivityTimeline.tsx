@@ -45,6 +45,9 @@ const stageStyles: Record<string, string> = {
   Archived: 'bg-gray-100 text-gray-500',
 };
 
+// ActivityIcon — renders a small coloured dot indicating the activity type.
+// Uses simple colour coding so the timeline is scannable at a glance.
+// Per S1-002 §5.5 — status indicators use consistent colour tokens.
 function ActivityIcon({
   type,
   completed,
