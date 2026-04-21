@@ -66,7 +66,27 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
   async function handleCopy(doc: SavedDocument) {
     try {
       const parsed = JSON.parse(doc.content);
-      const text = parsed.body ?? JSON.stringify(parsed, null, 2);
+      let text = '';
+      if (doc.type === 'cover_letter') {
+        text = `${parsed.name}\n${parsed.location}\n\n${parsed.date}\n\n${parsed.greeting}\n\n${parsed.body}\n\n${parsed.signoff}`;
+      } else {
+        // Resume — format as readable plain text
+        const expText =
+          parsed.experiences
+            ?.map(
+              (exp: { role: string; company: string; dateRange: string; bullets: string[] }) =>
+                `${exp.role} at ${exp.company} (${exp.dateRange})\n${exp.bullets?.map((b: string) => `• ${b}`).join('\n')}`,
+            )
+            .join('\n\n') ?? '';
+        const eduText =
+          parsed.education
+            ?.map(
+              (edu: { institution: string; degree: string; field: string; dateRange: string }) =>
+                `${edu.degree} in ${edu.field} — ${edu.institution} (${edu.dateRange})`,
+            )
+            .join('\n') ?? '';
+        text = `${parsed.name}\n${parsed.headline}\n${parsed.location}\n\nPROFESSIONAL SUMMARY\n${parsed.summary}\n\nEXPERIENCE\n${expText}\n\nEDUCATION\n${eduText}\n\nSKILLS\n${parsed.skills?.join(', ')}`;
+      }
       await navigator.clipboard.writeText(text);
       setCopiedId(doc.id);
       setTimeout(() => setCopiedId(null), 2000);
