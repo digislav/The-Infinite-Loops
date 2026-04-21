@@ -193,7 +193,7 @@ export function ResumeGenerator() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 p-4 print:hidden">
             <div className="flex items-center gap-3">
               <Label className="font-semibold text-gray-700">Template Style:</Label>
-              <Select value={template} onValueChange={(val: 'classic' | 'modern') => setTemplate(val)}>
+              <Select value={template} onValueChange={(val) => setTemplate(val as 'classic' | 'modern')}>
                 <SelectTrigger className="w-[180px] bg-white">
                   <SelectValue />
                 </SelectTrigger>
