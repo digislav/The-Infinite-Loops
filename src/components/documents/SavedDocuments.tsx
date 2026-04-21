@@ -79,7 +79,7 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
 
   // handleDelete — deletes a saved document after confirmation.
   async function handleDelete(doc: SavedDocument) {
-    const confirmed = window.confirm(`Delete "${doc.title}"?`);
+    const confirmed = window.confirm(`Delete "${doc.name}"?`);
     if (!confirmed) return;
 
     try {
