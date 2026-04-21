@@ -32,7 +32,7 @@ export function UpdateEmailDialog({ currentEmail }: { currentEmail: string }) {
         setSuccess(true);
         setNewEmail('');
       }
-    } catch (err: any) {
+    } catch {
       setError('An unexpected error occurred.');
     } finally {
       setLoading(false);
