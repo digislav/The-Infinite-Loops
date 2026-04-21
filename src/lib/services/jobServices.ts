@@ -32,13 +32,14 @@ export type Job = {
 export type JobActivity = {
   id?: string;
   job_id: string;
-  activity_type: 'STAGE_CHANGE' | 'INTERVIEW_SCHEDULED' | 'NOTE_ADDED';
+  activity_type: 'STAGE_CHANGE' | 'INTERVIEW_SCHEDULED' | 'NOTE_ADDED' | 'REMINDER_SET';
   timeline_event_type?: string;
   notes?: string;
-  // Interview specific fields (S2-011)
+  // Interview or reminder specific fields
   interview_round?: string;
   interview_date?: string;
   location_url?: string;
+  is_completed?: boolean;
   activity_date: string;
   created_at?: string;
 };
@@ -251,6 +252,38 @@ export async function addInterview(userId: string, jobId: string, data: Partial<
       activity_type: 'INTERVIEW_SCHEDULED',
       activity_date: new Date().toISOString(),
     })
+    .select()
+    .single();
+}
+
+export async function addReminder(userId: string, jobId: string, data: Partial<JobActivity>) {
+  const supabase = await createClient();
+  return await supabase
+    .from('job_activities')
+    .insert({
+      ...data,
+      job_id: jobId,
+      activity_type: 'REMINDER_SET',
+      is_completed: false,
+      timeline_event_type: data.timeline_event_type ?? 'Follow Up',
+      activity_date: data.activity_date ?? new Date().toISOString(),
+    })
+    .select()
+    .single();
+}
+
+export async function updateReminderCompletion(
+  userId: string,
+  jobId: string,
+  activityId: string,
+  isCompleted: boolean,
+) {
+  const supabase = await createClient();
+  return await supabase
+    .from('job_activities')
+    .update({ is_completed: isCompleted })
+    .eq('id', activityId)
+    .eq('job_id', jobId)
     .select()
     .single();
 }

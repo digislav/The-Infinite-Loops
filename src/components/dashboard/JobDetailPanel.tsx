@@ -2,6 +2,7 @@
 
 import { InterviewSection } from './InterviewSection';
 import { JobActivityTimeline } from './JobActivityTimeline';
+import { ReminderSection } from './ReminderSection';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +76,7 @@ export function JobDetailPanel({
 }: JobDetailPanelProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [activityRefreshKey, setActivityRefreshKey] = useState(0);
 
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
@@ -527,6 +529,8 @@ export function JobDetailPanel({
               <InterviewSection jobId={job.id} />
             </div>
 
+            <ReminderSection jobId={job.id} onReminderSaved={() => setActivityRefreshKey((prev) => prev + 1)} />
+
             {/* S2-010: Activity Timeline — shows all stage changes, interviews,
     and note updates for this job in reverse chronological order.
     The timeline component fetches from the protected API route which
@@ -535,7 +539,7 @@ export function JobDetailPanel({
     - Amber dot: interview events (from S2-011)
     - Gray dot: note updates */}
             <div className="mt-5">
-              <JobActivityTimeline jobId={job.id} />
+              <JobActivityTimeline jobId={job.id} refreshKey={activityRefreshKey} />
             </div>
           </>
         )}
