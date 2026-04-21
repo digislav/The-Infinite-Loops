@@ -410,10 +410,9 @@ export function CoverLetterGenerator() {
             {isRewriting && <p className="text-xs text-gray-400">Refining your body paragraphs...</p>}
           </div>
 
-          {/* THE COVER LETTER CANVAS */}
           <div 
             id="cover-letter-print-canvas"
-            className="w-full bg-white border border-gray-300 shadow-sm p-12 min-h-[800px] text-gray-900 print:w-full print:border-none print:shadow-none print:p-0 print:m-0"
+            className="w-full bg-white border border-gray-300 shadow-sm p-12 min-h-[800px] text-gray-900 print:w-full print:border-none print:shadow-none"
           >
             <div className="flex flex-col gap-6 max-w-3xl mx-auto font-serif">
               <div className="flex flex-col">

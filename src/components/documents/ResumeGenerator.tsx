@@ -219,7 +219,7 @@ export function ResumeGenerator() {
           {/* THE RESUME CANVAS */}
           <div 
             id="resume-print-canvas"
-            className="w-full bg-white border border-gray-300 shadow-sm p-8 min-h-[800px] text-gray-900 print:w-full print:border-none print:shadow-none print:p-0 print:m-0"
+            className="w-full bg-white border border-gray-300 shadow-sm p-8 min-h-[800px] text-gray-900 print:w-full print:border-none print:shadow-none"
           >
             {template === 'classic' && (
               <div className="flex flex-col gap-6 max-w-3xl mx-auto">
