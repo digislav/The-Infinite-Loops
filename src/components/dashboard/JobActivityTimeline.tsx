@@ -21,8 +21,6 @@ import { cn } from '@/lib/utils';
 import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
 import type { PipelineStage } from '@/types/job.types';
 
-// Shape of a single activity record from the API.
-// Matches the job_activities table columns per S1-003 §3.1.
 interface JobActivity {
   id: string;
   job_id: string;
@@ -37,9 +35,6 @@ interface JobActivity {
   created_at?: string;
 }
 
-// Pipeline stage colour tokens — per S1-002 §4.5.
-// Must stay consistent with stageStyles in BoardContent.tsx and
-// JobDetailPanel.tsx so stage badges look identical everywhere.
 const stageStyles: Record<string, string> = {
   Interested: 'bg-indigo-100 text-indigo-700',
   Applied: 'bg-blue-100 text-blue-700',
@@ -64,13 +59,9 @@ function ActivityIcon({
     <div
       className={cn(
         'mt-1 h-2.5 w-2.5 shrink-0 rounded-full',
-        // Blue dot for stage changes
         type === 'STAGE_CHANGE' && 'bg-blue-400',
-        // Amber dot for interviews
         type === 'INTERVIEW_SCHEDULED' && 'bg-amber-400',
-        // Gray dot for notes
         type === 'NOTE_ADDED' && 'bg-gray-400',
-        // Green dot for completed reminders, amber for pending reminders
         type === 'REMINDER_SET' && (completed ? 'bg-emerald-400' : 'bg-amber-400'),
       )}
       aria-hidden={true}
@@ -78,8 +69,6 @@ function ActivityIcon({
   );
 }
 
-// ActivityItem — renders a single timeline event.
-// Shows the event type, description, optional stage badge, and date.
 function ActivityItem({
   activity,
   onToggleReminder,
@@ -176,8 +165,6 @@ function ActivityItem({
 }
 
 interface JobActivityTimelineProps {
-  // The ID of the job whose activities to display.
-  // The backend verifies the caller owns this job before returning data.
   jobId: string;
   refreshKey?: number;
 }
@@ -188,12 +175,9 @@ export function JobActivityTimeline({ jobId, refreshKey }: JobActivityTimelinePr
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Use a flag to prevent state updates if the component unmounts
-    // or jobId changes before the fetch completes.
     let cancelled = false;
 
     const loadActivities = async () => {
-      // Reset state at the start of each fetch.
       if (!cancelled) {
         setLoading(true);
         setError(null);
@@ -201,9 +185,6 @@ export function JobActivityTimeline({ jobId, refreshKey }: JobActivityTimelinePr
       }
 
       try {
-        // Fetch activities from the protected API route.
-        // The backend verifies the session and ownership before returning data —
-        // we never send a user_id from the client per S1-003 §5.4.
         const res = await fetch(`/api/jobs/${jobId}/activities`);
         if (!res.ok) {
           if (!cancelled) setError('Could not load activity timeline.');
@@ -220,13 +201,11 @@ export function JobActivityTimeline({ jobId, refreshKey }: JobActivityTimelinePr
 
     loadActivities();
 
-    // Cleanup — if jobId changes before fetch completes, ignore the result.
     return () => {
       cancelled = true;
     };
   }, [jobId, refreshKey]);
 
-  // LOADING STATE — skeleton placeholders per S1-002 §9.2.
   if (loading) {
     return (
       <div className="flex flex-col gap-3">
@@ -246,12 +225,10 @@ export function JobActivityTimeline({ jobId, refreshKey }: JobActivityTimelinePr
     );
   }
 
-  // ERROR STATE — human-friendly message per S1-001 §6.3.
   if (error) {
     return <p className="text-sm text-red-500">{error}</p>;
   }
 
-  // EMPTY STATE — per S1-002 §5.7 every list must have an empty state.
   if (activities.length === 0) {
     return (
       <div className="flex flex-col gap-1">
@@ -261,12 +238,10 @@ export function JobActivityTimeline({ jobId, refreshKey }: JobActivityTimelinePr
     );
   }
 
-  // TIMELINE — renders all activities in reverse chronological order.
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm font-semibold text-gray-700">Activity Timeline</p>
       <div className="relative flex flex-col gap-4 pl-1">
-        {/* Thin vertical line connecting the dots */}
         <div className="absolute top-2 left-[4px] h-full w-px bg-gray-100" aria-hidden={true} />
         {activities.map((activity) => (
           <ActivityItem
