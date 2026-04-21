@@ -1,5 +1,5 @@
 -- Career Preferences Table
-CREATE TABLE public.career_preferences (
+CREATE TABLE IF NOT EXISTS public.career_preferences (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   target_roles TEXT[] DEFAULT '{}', 
@@ -18,7 +18,7 @@ ALTER TABLE public.career_preferences ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE policyname = 'Users can manage their own career_preferences'
+    WHERE policyname = 'Users can manage own career_preferences'
     AND tablename = 'career_preferences'
   ) THEN
     CREATE POLICY "Users can manage own career_preferences"

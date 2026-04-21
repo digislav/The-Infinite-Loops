@@ -37,7 +37,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { data, error } = await updateCareerPreferences(user.id, body);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error('Career preferences save error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
