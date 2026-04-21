@@ -104,13 +104,13 @@ Portfolio: ${profile.portfolio_url || 'None'}
 Raw Summary: ${profile.summary || ''}
 
 Raw Experiences:
-${experiences.map((exp: any) => `- ${exp.role_title} at ${exp.company_name} (${exp.start_date} to ${exp.is_current ? 'Present' : exp.end_date}): ${exp.description || ''}`).join('\n')}
+${experiences.map((exp) => `- ${exp.role_title} at ${exp.company_name} (${exp.start_date} to ${exp.is_current ? 'Present' : exp.end_date}): ${exp.description || ''}`).join('\n')}
 
 Raw Education:
-${education.map((edu: any) => `- ${edu.degree} in ${edu.field_of_study} from ${edu.institution} (${edu.start_date || 'N/A'} to ${edu.is_current ? 'Present' : (edu.end_date || 'N/A')})`).join('\n')}
+${education.map((edu) => `- ${edu.degree} in ${edu.field_of_study} from ${edu.institution} (${edu.start_date || 'N/A'} to ${edu.is_current ? 'Present' : (edu.end_date || 'N/A')})`).join('\n')}
 
 Raw Skills: 
-${skills.map((skill: any) => skill.skill_name).join(', ')}
+${skills.map((skill) => skill.skill_name).join(', ')}
 
 TARGET JOB DESCRIPTION:
 Title: ${job.job_title}

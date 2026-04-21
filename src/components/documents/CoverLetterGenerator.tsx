@@ -409,7 +409,6 @@ export function CoverLetterGenerator() {
 
             {isRewriting && <p className="text-xs text-gray-400">Refining your body paragraphs...</p>}
           </div>
-          </div>
 
           {/* THE COVER LETTER CANVAS */}
           <div 
