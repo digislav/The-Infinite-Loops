@@ -1,5 +1,5 @@
 -- Skills Table
-CREATE TABLE public.skills (
+CREATE TABLE IF NOT EXISTS public.skills (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   skill_name TEXT NOT NULL,

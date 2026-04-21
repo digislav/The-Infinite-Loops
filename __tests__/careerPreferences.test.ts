@@ -38,6 +38,7 @@ describe('careerPreferencesServices', () => {
 
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({ user_id: 'user-123', min_salary: 120000 }),
+      { onConflict: 'user_id' },
     );
   });
 });
