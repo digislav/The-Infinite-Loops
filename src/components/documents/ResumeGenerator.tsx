@@ -45,17 +45,26 @@ interface ResumeData {
   skills: string[];
 }
 
-export function ResumeGenerator() {
+interface ResumeGeneratorProps {
+  // S2-024: Called after a successful save so the parent can refresh
+  // the saved documents list.
+  onSaved?: () => void;
+}
+
+export function ResumeGenerator({ onSaved }: ResumeGeneratorProps) {
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState('');
-  
   const [isGenerating, setIsGenerating] = useState(false);
   const [draft, setDraft] = useState<ResumeData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // 'classic' or 'modern' templates
   const [template, setTemplate] = useState<'classic' | 'modern'>('classic');
+
+  // S2-024: Save state
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +96,7 @@ export function ResumeGenerator() {
     setIsGenerating(true);
     setError(null);
     setDraft(null);
+    setSaveStatus('idle');
 
     try {
       const res = await fetch('/api/ai/generate-resume-json', {
@@ -103,7 +113,9 @@ export function ResumeGenerator() {
           return;
         }
         if (resJson.error?.code === 'INSUFFICIENT_CONTEXT') {
-          setError('Insufficient profile data! You must fill out at least one Experience or Education block in your Profile before tailoring a resume.');
+          setError(
+            'Insufficient profile data! You must fill out at least one Experience or Education block in your Profile before tailoring a resume.',
+          );
           return;
         }
         setError('Failed to generate tailored resume. Please try again.');
@@ -118,12 +130,50 @@ export function ResumeGenerator() {
     }
   }
 
+  // handleSave — S2-024: saves the current resume draft as a document record.
+  // Only job_id, type, name, and content are sent — user_id comes from
+  // the session server-side per S1-003 §5.4.
+  async function handleSave() {
+    if (!draft || !selectedJobId) return;
+
+    setIsSaving(true);
+    setSaveStatus('idle');
+
+    try {
+      const job = jobs.find((j) => j.id === selectedJobId);
+      const title = job ? `Resume — ${job.job_title} at ${job.company_name}` : 'Resume Draft';
+
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Only send job_id, type, name, content — never user_id per S1-003 §5.4.
+        // Using 'name' to match the documents table column name.
+        body: JSON.stringify({
+          job_id: selectedJobId,
+          type: 'resume',
+          name: title,
+          content: JSON.stringify(draft),
+        }),
+      });
+
+      if (!res.ok) {
+        setSaveStatus('error');
+        return;
+      }
+
+      setSaveStatus('success');
+      if (onSaved) onSaved();
+    } catch {
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   function handlePrint() {
     const originalTitle = document.title;
-    // Overwrite the document title so the browser print header looks clean
     document.title = draft?.name ? `${draft.name.replace(/\s+/g, '_')}_Resume` : 'Resume';
     window.print();
-    // Restore the title immediately after the print dialog closes
     document.title = originalTitle;
   }
 
@@ -172,7 +222,11 @@ export function ResumeGenerator() {
           >
             {isGenerating ? 'Structuring Resume...' : 'Generate Tailored Resume'}
           </Button>
-          {isGenerating && <p className="text-sm text-gray-400">Analyzing skills & generating JSON... (Takes ~10s)</p>}
+          {isGenerating && (
+            <p className="text-sm text-gray-400">
+              Analyzing skills & generating JSON... (Takes ~10s)
+            </p>
+          )}
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
@@ -187,13 +241,15 @@ export function ResumeGenerator() {
 
       {/* DRAFT OUTPUT - The actual HTML Template Canvas */}
       {draft && !isGenerating && (
-        <div className="flex flex-col gap-4 mt-4 print:mt-0">
-          
+        <div className="mt-4 flex flex-col gap-4 print:mt-0">
           {/* Templating Controls & Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 p-4 print:hidden">
+          <div className="flex flex-col justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 p-4 sm:flex-row sm:items-center print:hidden">
             <div className="flex items-center gap-3">
               <Label className="font-semibold text-gray-700">Template Style:</Label>
-              <Select value={template} onValueChange={(val) => setTemplate(val as 'classic' | 'modern')}>
+              <Select
+                value={template}
+                onValueChange={(val) => setTemplate((val ?? 'classic') as 'classic' | 'modern')}
+              >
                 <SelectTrigger className="w-[180px] bg-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -203,55 +259,105 @@ export function ResumeGenerator() {
                 </SelectContent>
               </Select>
             </div>
-            
-            <Button
-              onClick={handlePrint}
-              className="bg-black text-white hover:bg-gray-800"
-            >
-              Print / Save as PDF
-            </Button>
+
+            <div className="flex items-center gap-3">
+              {/* S2-024: Save to Documents button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="h-9 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+              >
+                {isSaving
+                  ? 'Saving...'
+                  : saveStatus === 'success'
+                    ? '✓ Saved!'
+                    : saveStatus === 'error'
+                      ? 'Save Failed'
+                      : 'Save to Documents'}
+              </Button>
+              <Button onClick={handlePrint} className="bg-black text-white hover:bg-gray-800">
+                Print / Save as PDF
+              </Button>
+            </div>
           </div>
 
-          <div className="text-xs text-amber-600 font-medium mb-2 print:hidden">
-             ⚠ This is an AI-generated draft. All bullet points have been rewritten to match the target job description.
+          <div className="mb-2 text-xs font-medium text-amber-600 print:hidden">
+            ⚠ This is an AI-generated draft. All bullet points have been rewritten to match the
+            target job description.
           </div>
 
           {/* THE RESUME CANVAS */}
-          <div 
+          <div
             id="resume-print-canvas"
-            className="w-full bg-white border border-gray-300 shadow-sm p-8 min-h-[800px] text-gray-900 print:w-full print:border-none print:shadow-none"
+            className="min-h-[800px] w-full border border-gray-300 bg-white p-8 text-gray-900 shadow-sm print:w-full print:border-none print:shadow-none"
           >
             {template === 'classic' && (
-              <div className="flex flex-col gap-6 max-w-3xl mx-auto">
-                <div className="text-center border-b-2 border-gray-900 pb-4">
-                  <h1 className="text-3xl font-serif font-bold uppercase tracking-wide">{draft.name}</h1>
-                  <p className="text-sm font-medium mt-1">{draft.headline}</p>
-                  <p className="text-xs text-gray-600 mt-0.5">{draft.location}</p>
-                  {draft.links && (draft.links.linkedin || draft.links.github || draft.links.portfolio) && (
-                    <div className="flex justify-center flex-wrap gap-4 mt-2 text-xs font-semibold text-[#2E75B6]">
-                      {draft.links.linkedin && draft.links.linkedin !== 'None' && <a href={draft.links.linkedin} target="_blank" rel="noreferrer" className="hover:underline">LinkedIn</a>}
-                      {draft.links.github && draft.links.github !== 'None' && <a href={draft.links.github} target="_blank" rel="noreferrer" className="hover:underline">GitHub</a>}
-                      {draft.links.portfolio && draft.links.portfolio !== 'None' && <a href={draft.links.portfolio} target="_blank" rel="noreferrer" className="hover:underline">Portfolio</a>}
-                    </div>
-                  )}
+              <div className="mx-auto flex max-w-3xl flex-col gap-6">
+                <div className="border-b-2 border-gray-900 pb-4 text-center">
+                  <h1 className="font-serif text-3xl font-bold tracking-wide uppercase">
+                    {draft.name}
+                  </h1>
+                  <p className="mt-1 text-sm font-medium">{draft.headline}</p>
+                  <p className="mt-0.5 text-xs text-gray-600">{draft.location}</p>
+                  {draft.links &&
+                    (draft.links.linkedin || draft.links.github || draft.links.portfolio) && (
+                      <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs font-semibold text-[#2E75B6]">
+                        {draft.links.linkedin && draft.links.linkedin !== 'None' && (
+                          <a
+                            href={draft.links.linkedin}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:underline"
+                          >
+                            LinkedIn
+                          </a>
+                        )}
+                        {draft.links.github && draft.links.github !== 'None' && (
+                          <a
+                            href={draft.links.github}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:underline"
+                          >
+                            GitHub
+                          </a>
+                        )}
+                        {draft.links.portfolio && draft.links.portfolio !== 'None' && (
+                          <a
+                            href={draft.links.portfolio}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:underline"
+                          >
+                            Portfolio
+                          </a>
+                        )}
+                      </div>
+                    )}
                 </div>
-                
+
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider border-b border-gray-300 mb-2 pb-1">Professional Summary</h2>
+                  <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                    Professional Summary
+                  </h2>
                   <p className="text-sm leading-relaxed">{draft.summary}</p>
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider border-b border-gray-300 mb-2 pb-1">Experience</h2>
+                  <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                    Experience
+                  </h2>
                   <div className="flex flex-col gap-4">
                     {draft.experiences?.map((exp, i) => (
                       <div key={i}>
-                        <div className="flex justify-between items-baseline">
-                          <h3 className="font-bold text-sm">{exp.role}</h3>
+                        <div className="flex items-baseline justify-between">
+                          <h3 className="text-sm font-bold">{exp.role}</h3>
                           <span className="text-xs font-semibold">{exp.dateRange}</span>
                         </div>
-                        <div className="text-sm italic mb-1.5">{exp.company}</div>
-                        <ul className="list-disc pl-5 text-sm flex flex-col gap-1">
+                        <div className="mb-1.5 text-sm italic">{exp.company}</div>
+                        <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
                           {exp.bullets?.map((bull, j) => (
                             <li key={j}>{bull}</li>
                           ))}
@@ -262,13 +368,17 @@ export function ResumeGenerator() {
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider border-b border-gray-300 mb-2 pb-1">Education</h2>
+                  <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                    Education
+                  </h2>
                   <div className="flex flex-col gap-3">
                     {draft.education?.map((edu, i) => (
-                      <div key={i} className="flex justify-between items-baseline">
+                      <div key={i} className="flex items-baseline justify-between">
                         <div>
-                          <div className="font-bold text-sm">{edu.institution}</div>
-                          <div className="text-sm italic">{edu.degree} in {edu.field}</div>
+                          <div className="text-sm font-bold">{edu.institution}</div>
+                          <div className="text-sm italic">
+                            {edu.degree} in {edu.field}
+                          </div>
                         </div>
                         <div className="text-xs font-semibold">{edu.dateRange}</div>
                       </div>
@@ -277,71 +387,117 @@ export function ResumeGenerator() {
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider border-b border-gray-300 mb-2 pb-1">Skills</h2>
+                  <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                    Skills
+                  </h2>
                   <p className="text-sm leading-relaxed">{draft.skills?.join(', ')}</p>
                 </div>
               </div>
             )}
 
             {template === 'modern' && (
-              <div className="flex max-w-3xl mx-auto h-full min-h-[800px]">
+              <div className="mx-auto flex h-full min-h-[800px] max-w-3xl">
                 {/* Left Accent Column */}
-                <div className="w-1/3 bg-[#f8f9fa] border-r border-gray-200 p-6 flex flex-col gap-6 print:bg-[#f8f9fa]">
+                <div className="flex w-1/3 flex-col gap-6 border-r border-gray-200 bg-[#f8f9fa] p-6 print:bg-[#f8f9fa]">
                   <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-[#2E75B6]">{draft.name}</h1>
-                    <p className="text-sm font-semibold text-gray-700 mt-1">{draft.headline}</p>
-                    <p className="text-xs text-gray-500 mt-1">{draft.location}</p>
-                    {draft.links && (draft.links.linkedin || draft.links.github || draft.links.portfolio) && (
-                      <div className="flex flex-col gap-1 mt-3">
-                        {draft.links.linkedin && draft.links.linkedin !== 'None' && <a href={draft.links.linkedin} target="_blank" rel="noreferrer" className="text-xs font-semibold text-gray-600 hover:text-[#2E75B6] hover:underline">LinkedIn</a>}
-                        {draft.links.github && draft.links.github !== 'None' && <a href={draft.links.github} target="_blank" rel="noreferrer" className="text-xs font-semibold text-gray-600 hover:text-[#2E75B6] hover:underline">GitHub</a>}
-                        {draft.links.portfolio && draft.links.portfolio !== 'None' && <a href={draft.links.portfolio} target="_blank" rel="noreferrer" className="text-xs font-semibold text-gray-600 hover:text-[#2E75B6] hover:underline">Portfolio</a>}
-                      </div>
-                    )}
+                    <h1 className="text-2xl font-bold tracking-tight text-[#2E75B6]">
+                      {draft.name}
+                    </h1>
+                    <p className="mt-1 text-sm font-semibold text-gray-700">{draft.headline}</p>
+                    <p className="mt-1 text-xs text-gray-500">{draft.location}</p>
+                    {draft.links &&
+                      (draft.links.linkedin || draft.links.github || draft.links.portfolio) && (
+                        <div className="mt-3 flex flex-col gap-1">
+                          {draft.links.linkedin && draft.links.linkedin !== 'None' && (
+                            <a
+                              href={draft.links.linkedin}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-semibold text-gray-600 hover:text-[#2E75B6] hover:underline"
+                            >
+                              LinkedIn
+                            </a>
+                          )}
+                          {draft.links.github && draft.links.github !== 'None' && (
+                            <a
+                              href={draft.links.github}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-semibold text-gray-600 hover:text-[#2E75B6] hover:underline"
+                            >
+                              GitHub
+                            </a>
+                          )}
+                          {draft.links.portfolio && draft.links.portfolio !== 'None' && (
+                            <a
+                              href={draft.links.portfolio}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-semibold text-gray-600 hover:text-[#2E75B6] hover:underline"
+                            >
+                              Portfolio
+                            </a>
+                          )}
+                        </div>
+                      )}
                   </div>
 
                   <div>
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-[#2E75B6] mb-2">Education</h2>
+                    <h2 className="mb-2 text-xs font-bold tracking-wider text-[#2E75B6] uppercase">
+                      Education
+                    </h2>
                     <div className="flex flex-col gap-3">
                       {draft.education?.map((edu, i) => (
                         <div key={i}>
                           <div className="text-sm font-bold text-gray-800">{edu.degree}</div>
                           <div className="text-xs text-gray-600">{edu.field}</div>
-                          <div className="text-xs text-gray-500 italic mt-0.5">{edu.institution}</div>
-                          <div className="text-xs text-gray-400 mt-0.5">{edu.dateRange}</div>
+                          <div className="mt-0.5 text-xs text-gray-500 italic">
+                            {edu.institution}
+                          </div>
+                          <div className="mt-0.5 text-xs text-gray-400">{edu.dateRange}</div>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-[#2E75B6] mb-2">Capabilities</h2>
+                    <h2 className="mb-2 text-xs font-bold tracking-wider text-[#2E75B6] uppercase">
+                      Capabilities
+                    </h2>
                     <div className="flex flex-col gap-1.5">
                       {draft.skills?.map((skill, i) => (
-                        <div key={i} className="text-xs font-medium text-gray-700">{skill}</div>
+                        <div key={i} className="text-xs font-medium text-gray-700">
+                          {skill}
+                        </div>
                       ))}
                     </div>
                   </div>
                 </div>
 
                 {/* Right Main Column */}
-                <div className="w-2/3 p-6 flex flex-col gap-6">
+                <div className="flex w-2/3 flex-col gap-6 p-6">
                   <div>
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-[#2E75B6] border-b border-gray-200 mb-2 pb-1">Profile Profile</h2>
+                    <h2 className="mb-2 border-b border-gray-200 pb-1 text-xs font-bold tracking-wider text-[#2E75B6] uppercase">
+                      Profile
+                    </h2>
                     <p className="text-sm leading-relaxed text-gray-800">{draft.summary}</p>
                   </div>
 
                   <div>
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-[#2E75B6] border-b border-gray-200 mb-2 pb-1">Professional Experience</h2>
+                    <h2 className="mb-2 border-b border-gray-200 pb-1 text-xs font-bold tracking-wider text-[#2E75B6] uppercase">
+                      Professional Experience
+                    </h2>
                     <div className="flex flex-col gap-5">
                       {draft.experiences?.map((exp, i) => (
                         <div key={i}>
-                          <div className="flex justify-between items-baseline mb-0.5">
-                            <h3 className="font-bold text-sm text-gray-900">{exp.role}</h3>
-                            <span className="text-xs font-medium text-[#2E75B6]">{exp.dateRange}</span>
+                          <div className="mb-0.5 flex items-baseline justify-between">
+                            <h3 className="text-sm font-bold text-gray-900">{exp.role}</h3>
+                            <span className="text-xs font-medium text-[#2E75B6]">
+                              {exp.dateRange}
+                            </span>
                           </div>
-                          <div className="text-sm text-gray-600 mb-2">{exp.company}</div>
-                          <ul className="list-outside list-disc pl-4 text-xs text-gray-700 leading-relaxed space-y-1">
+                          <div className="mb-2 text-sm text-gray-600">{exp.company}</div>
+                          <ul className="list-outside list-disc space-y-1 pl-4 text-xs leading-relaxed text-gray-700">
                             {exp.bullets?.map((bull, j) => (
                               <li key={j}>{bull}</li>
                             ))}
@@ -353,7 +509,6 @@ export function ResumeGenerator() {
                 </div>
               </div>
             )}
-            
           </div>
         </div>
       )}
