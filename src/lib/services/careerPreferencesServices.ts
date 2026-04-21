@@ -19,7 +19,10 @@ export async function updateCareerPreferences(userId: string, data: Partial<Care
   // Upsert handles both Create and Update in one go
   return await supabase
     .from('career_preferences')
-    .upsert({ ...data, user_id: userId, updated_at: new Date().toISOString() })
+    .upsert(
+      { ...data, user_id: userId, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' },
+    )
     .select()
     .single();
 }

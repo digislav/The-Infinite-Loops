@@ -3,7 +3,7 @@
 -- Follows the same pattern as the experience table per S1-001 §3.3.
 -- Per S1-003 §4.1 — RLS enabled, users can only access their own records.
 
-CREATE TABLE public.education (
+CREATE TABLE IF NOT EXISTS public.education (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   -- Ownership column — per S1-003 §3.3 every user-scoped table must have
   -- user_id with NOT NULL and FK to auth.users ON DELETE CASCADE.
@@ -27,7 +27,7 @@ CREATE TABLE public.education (
 );
 
 -- Index for fast lookup by user — per S1-001 §3.3.
-CREATE INDEX idx_education_user_id ON public.education(user_id);
+CREATE INDEX IF NOT EXISTS idx_education_user_id ON public.education(user_id);
 
 -- Enable Row Level Security — per S1-003 §4.1.
 -- RLS is a defence-in-depth measure alongside service-layer ownership checks.
@@ -35,8 +35,16 @@ ALTER TABLE public.education ENABLE ROW LEVEL SECURITY;
 
 -- Single policy covering all operations — users can only manage their own records.
 -- Per S1-003 §4.2 — auth.uid() = user_id enforces ownership at the DB level.
-CREATE POLICY "Users can manage their own education"
-ON public.education
-FOR ALL
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE policyname = 'Users can manage their own education'
+    AND tablename = 'education'
+  ) THEN
+    CREATE POLICY "Users can manage their own education"
+    ON public.education
+    FOR ALL
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+  END IF;
+END $$;
