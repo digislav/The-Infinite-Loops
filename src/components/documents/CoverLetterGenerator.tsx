@@ -31,12 +31,26 @@ interface JobOption {
   current_stage: string;
 }
 
+interface CoverLetterData {
+  name: string;
+  location: string;
+  links?: {
+    linkedin?: string | null;
+    github?: string | null;
+    portfolio?: string | null;
+  };
+  date: string;
+  greeting: string;
+  body: string;
+  signoff: string;
+}
+
 export function CoverLetterGenerator() {
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState<CoverLetterData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -76,7 +90,7 @@ export function CoverLetterGenerator() {
 
     setIsGenerating(true);
     setError(null);
-    setDraft('');
+    setDraft(null);
     setCopied(false);
 
     try {
@@ -95,11 +109,15 @@ export function CoverLetterGenerator() {
           setError('AI services are currently experiencing high demand. Please try again later.');
           return;
         }
+        if (resJson.error?.code === 'INSUFFICIENT_CONTEXT') {
+          setError('Insufficient profile data! You must verify your Profile is filled out.');
+          return;
+        }
         setError('Failed to generate cover letter. Please try again.');
         return;
       }
 
-      setDraft(resJson.data?.draft ?? '');
+      setDraft(resJson.data?.draft ?? null);
     } catch {
       setError('Failed to generate cover letter. Please try again.');
     } finally {
@@ -110,16 +128,24 @@ export function CoverLetterGenerator() {
   // handleCopy — copies the draft to clipboard.
   async function handleCopy() {
     if (!draft) return;
-    await navigator.clipboard.writeText(draft);
+    const fullText = `${draft.name}\n${draft.location}\n\n${draft.date}\n\n${draft.greeting}\n\n${draft.body}\n\n${draft.signoff}`;
+    await navigator.clipboard.writeText(fullText);
     setCopied(true);
     // Reset copied state after 2 seconds.
     setTimeout(() => setCopied(false), 2000);
   }
 
+  function handlePrint() {
+    const originalTitle = document.title;
+    document.title = draft?.name ? `${draft.name.replace(/\s+/g, '_')}_Cover_Letter` : 'Cover_Letter';
+    window.print();
+    document.title = originalTitle;
+  }
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 print:m-0 print:gap-0">
       {/* Job selector — pick which job to tailor the cover letter for */}
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 print:hidden">
         <Label htmlFor="job-select" className="text-sm font-medium text-gray-700">
           Select a Job <span className="text-red-500">*</span>
         </Label>
@@ -153,7 +179,7 @@ export function CoverLetterGenerator() {
       </div>
 
       {/* Generate button */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 print:hidden">
         <Button
           onClick={handleGenerate}
           disabled={!selectedJobId || isGenerating}
@@ -165,11 +191,11 @@ export function CoverLetterGenerator() {
       </div>
 
       {/* Error state — human-friendly per S1-001 §6.3 */}
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="text-sm text-red-500 print:hidden">{error}</p>}
 
       {/* LOADING STATE — skeleton while generating */}
       {isGenerating && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 print:hidden">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-3/4" />
@@ -180,50 +206,74 @@ export function CoverLetterGenerator() {
         </div>
       )}
 
-      {/* DRAFT OUTPUT — shown after successful generation.
-          Per S1-004 — clearly labelled as an AI-generated draft.
-          User can edit the textarea before copying or saving. */}
+      {/* DRAFT OUTPUT */}
       {draft && !isGenerating && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 mt-4 print:mt-0">
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 p-4 print:hidden">
             <div className="flex flex-col gap-0.5">
               <h3 className="text-sm font-semibold text-gray-700">AI-Generated Draft</h3>
-              {/* Per S1-004 — AI output must be clearly labelled as a draft */}
               <p className="text-xs text-amber-600">
-                ⚠ This is an AI-generated draft. Review and edit before sending.
+                ⚠ Review and edit the body text below before printing or copying.
               </p>
             </div>
-            {/* Copy to clipboard button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCopy}
-              className="h-8 rounded-full bg-gray-50 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-100"
-            >
-              {copied ? '✓ Copied!' : 'Copy to Clipboard'}
-            </Button>
+            
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopy}
+                className="h-9 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-200"
+              >
+                {copied ? '✓ Copied!' : 'Copy Text'}
+              </Button>
+              <Button
+                onClick={handlePrint}
+                className="bg-black text-white hover:bg-gray-800"
+              >
+                Print / Save as PDF
+              </Button>
+            </div>
           </div>
 
-          {/* Editable textarea so user can refine the draft */}
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={20}
-            className="w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-sm leading-relaxed text-gray-700 placeholder:text-gray-400 focus:border-[#2E75B6] focus:ring-2 focus:ring-[#2E75B6]/50 focus:outline-none"
-          />
-
-          {/* Regenerate button — lets user try again with same job */}
-          <div className="flex justify-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className="text-xs text-gray-500 hover:text-gray-700"
-            >
-              Regenerate
-            </Button>
+          <div className="print:hidden">
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">Edit Letter Body</Label>
+            <textarea
+              value={draft.body}
+              onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+              rows={12}
+              className="w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-sm leading-relaxed text-gray-700 placeholder:text-gray-400 focus:border-[#2E75B6] focus:ring-2 focus:ring-[#2E75B6]/50 focus:outline-none"
+            />
           </div>
+
+          {/* THE COVER LETTER CANVAS */}
+          <div 
+            id="cover-letter-print-canvas"
+            className="w-full bg-white border border-gray-300 shadow-sm p-12 min-h-[800px] text-gray-900 print:w-full print:border-none print:shadow-none print:p-0 print:m-0"
+          >
+            <div className="flex flex-col gap-6 max-w-3xl mx-auto font-serif">
+              <div className="flex flex-col">
+                <h1 className="text-3xl font-bold uppercase tracking-wide">{draft.name}</h1>
+                <p className="text-sm mt-1">{draft.location}</p>
+                {draft.links && (draft.links.linkedin || draft.links.github || draft.links.portfolio) && (
+                    <div className="flex flex-wrap gap-4 mt-2 text-xs font-semibold text-[#2E75B6]">
+                      {draft.links.linkedin && draft.links.linkedin !== 'None' && <a href={draft.links.linkedin} target="_blank" rel="noreferrer" className="hover:underline">LinkedIn</a>}
+                      {draft.links.github && draft.links.github !== 'None' && <a href={draft.links.github} target="_blank" rel="noreferrer" className="hover:underline">GitHub</a>}
+                      {draft.links.portfolio && draft.links.portfolio !== 'None' && <a href={draft.links.portfolio} target="_blank" rel="noreferrer" className="hover:underline">Portfolio</a>}
+                    </div>
+                )}
+              </div>
+              
+              <div className="text-sm mt-8">{draft.date}</div>
+              
+              <div className="text-sm mt-8">{draft.greeting}</div>
+              
+              <div className="text-sm leading-loose whitespace-pre-wrap mt-2">{draft.body}</div>
+              
+              <div className="text-sm mt-6 whitespace-pre-wrap">{draft.signoff}</div>
+            </div>
+          </div>
+
         </div>
       )}
     </div>

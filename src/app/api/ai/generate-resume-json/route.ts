@@ -64,8 +64,13 @@ Return valid JSON conforming EXACTLY to this schema. DO NOT output markdown bloc
 
 {
   "name": "Full Name",
-  "headline": "A tailored 5-7 word professional title",
+  "headline": "The user's original headline verbatim, unless it is completely empty",
   "location": "City, State",
+  "links": {
+    "linkedin": "url or null",
+    "github": "url or null",
+    "portfolio": "url or null"
+  },
   "summary": "A 3-sentence professional summary tailored to the job description",
   "experiences": [
     {
@@ -91,14 +96,18 @@ Return valid JSON conforming EXACTLY to this schema. DO NOT output markdown bloc
 
 CANDIDATE RAW DATA:
 Name: ${profile.first_name} ${profile.last_name}
+Raw Headline: ${profile.headline || ''}
 Location: ${profile.location || ''}
+LinkedIn: ${profile.linkedin_url || 'None'}
+GitHub: ${profile.github_url || 'None'}
+Portfolio: ${profile.portfolio_url || 'None'}
 Raw Summary: ${profile.summary || ''}
 
 Raw Experiences:
 ${experiences.map((exp: any) => `- ${exp.role_title} at ${exp.company_name} (${exp.start_date} to ${exp.is_current ? 'Present' : exp.end_date}): ${exp.description || ''}`).join('\n')}
 
 Raw Education:
-${education.map((edu: any) => `- ${edu.degree} in ${edu.field_of_study} from ${edu.institution}`).join('\n')}
+${education.map((edu: any) => `- ${edu.degree} in ${edu.field_of_study} from ${edu.institution} (${edu.start_date || 'N/A'} to ${edu.is_current ? 'Present' : (edu.end_date || 'N/A')})`).join('\n')}
 
 Raw Skills: 
 ${skills.map((skill: any) => skill.skill_name).join(', ')}
@@ -112,13 +121,15 @@ Remember: Return ONLY a raw JSON object string.
     `.trim();
 
     const geminiApiKey = process.env.GEMINI_API_KEY;
+    const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
     if (!geminiApiKey) {
       console.error('GEMINI_API_KEY is not set in environment variables');
       return apiError('INTERNAL_ERROR', 500);
     }
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

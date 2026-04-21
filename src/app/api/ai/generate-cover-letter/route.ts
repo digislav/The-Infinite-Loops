@@ -61,16 +61,35 @@ export async function POST(req: Request) {
     const prompt = `
 You are a professional career coach helping a job seeker write a tailored cover letter.
 
-Write a professional cover letter for the following candidate applying to the following job.
+Write a professional cover letter for the candidate applying to the specified target job.
 The cover letter should be 3-4 paragraphs, professional in tone, and tailored to the specific role.
 Do not include placeholder text — write the full letter ready to use.
-Start with "Dear Hiring Manager," and end with "Sincerely, ${profile.first_name} ${profile.last_name}".
+
+Return valid JSON conforming EXACTLY to this schema. DO NOT output markdown blocks or intro text.
+
+{
+  "name": "Candidate Full Name",
+  "location": "Candidate Location",
+  "links": {
+    "linkedin": "url or null",
+    "github": "url or null",
+    "portfolio": "url or null"
+  },
+  "date": "Today's specific date",
+  "greeting": "Dear Hiring Manager,",
+  "body": "The full 3-4 paragraph text of the cover letter. Use double newlines to separate paragraphs.",
+  "signoff": "Sincerely,\\n\\n[Candidate Name]"
+}
 
 CANDIDATE PROFILE:
 Name: ${profile.first_name} ${profile.last_name}
+Current Letter Date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
 Headline: ${profile.headline ?? 'Not provided'}
 Summary: ${profile.summary ?? 'Not provided'}
 Location: ${profile.location ?? 'Not provided'}
+LinkedIn: ${profile.linkedin_url || 'None'}
+GitHub: ${profile.github_url || 'None'}
+Portfolio: ${profile.portfolio_url || 'None'}
 
 JOB DETAILS:
 Job Title: ${job.job_title}
@@ -78,25 +97,30 @@ Company: ${job.company_name}
 Location: ${job.location ?? 'Not specified'}
 Description: ${job.description ?? 'Not provided'}
 
-Write the cover letter now:
+Remember: Return ONLY a raw JSON object string.
     `.trim();
 
     // Step 7: Call the Gemini API.
     // The API key is read from the environment — never from the client.
     // Per S1-003 §8.1 — API keys must never be exposed to the browser.
     const geminiApiKey = process.env.GEMINI_API_KEY;
+    const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    
     if (!geminiApiKey) {
       console.error('GEMINI_API_KEY is not set in environment variables');
       return apiError('INTERNAL_ERROR', 500);
     }
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
         }),
       },
     );
@@ -119,9 +143,17 @@ Write the cover letter now:
       return apiError('AI_GENERATION_FAILED', 500);
     }
 
+    let parsedData = {};
+    try {
+      parsedData = JSON.parse(generatedText);
+    } catch {
+      const cleaned = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
+      parsedData = JSON.parse(cleaned);
+    }
+
     // Step 9: Return the generated cover letter draft.
     // Per S1-004 — AI output is returned as a draft for user review.
-    return apiSuccess({ draft: generatedText });
+    return apiSuccess({ draft: parsedData });
   } catch (error) {
     console.error('POST /api/ai/generate-cover-letter unexpected failure', { error });
     return apiError('INTERNAL_ERROR', 500);

@@ -24,6 +24,11 @@ interface ResumeData {
   name: string;
   headline: string;
   location: string;
+  links?: {
+    linkedin?: string | null;
+    github?: string | null;
+    portfolio?: string | null;
+  };
   summary: string;
   experiences: {
     company: string;
@@ -222,6 +227,13 @@ export function ResumeGenerator() {
                   <h1 className="text-3xl font-serif font-bold uppercase tracking-wide">{draft.name}</h1>
                   <p className="text-sm font-medium mt-1">{draft.headline}</p>
                   <p className="text-xs text-gray-600 mt-0.5">{draft.location}</p>
+                  {draft.links && (draft.links.linkedin || draft.links.github || draft.links.portfolio) && (
+                    <div className="flex justify-center flex-wrap gap-4 mt-2 text-xs font-semibold text-[#2E75B6]">
+                      {draft.links.linkedin && draft.links.linkedin !== 'None' && <a href={draft.links.linkedin} target="_blank" rel="noreferrer" className="hover:underline">LinkedIn</a>}
+                      {draft.links.github && draft.links.github !== 'None' && <a href={draft.links.github} target="_blank" rel="noreferrer" className="hover:underline">GitHub</a>}
+                      {draft.links.portfolio && draft.links.portfolio !== 'None' && <a href={draft.links.portfolio} target="_blank" rel="noreferrer" className="hover:underline">Portfolio</a>}
+                    </div>
+                  )}
                 </div>
                 
                 <div>
@@ -279,6 +291,13 @@ export function ResumeGenerator() {
                     <h1 className="text-2xl font-bold tracking-tight text-[#2E75B6]">{draft.name}</h1>
                     <p className="text-sm font-semibold text-gray-700 mt-1">{draft.headline}</p>
                     <p className="text-xs text-gray-500 mt-1">{draft.location}</p>
+                    {draft.links && (draft.links.linkedin || draft.links.github || draft.links.portfolio) && (
+                      <div className="flex flex-col gap-1 mt-3">
+                        {draft.links.linkedin && draft.links.linkedin !== 'None' && <a href={draft.links.linkedin} target="_blank" rel="noreferrer" className="text-xs font-semibold text-gray-600 hover:text-[#2E75B6] hover:underline">LinkedIn</a>}
+                        {draft.links.github && draft.links.github !== 'None' && <a href={draft.links.github} target="_blank" rel="noreferrer" className="text-xs font-semibold text-gray-600 hover:text-[#2E75B6] hover:underline">GitHub</a>}
+                        {draft.links.portfolio && draft.links.portfolio !== 'None' && <a href={draft.links.portfolio} target="_blank" rel="noreferrer" className="text-xs font-semibold text-gray-600 hover:text-[#2E75B6] hover:underline">Portfolio</a>}
+                      </div>
+                    )}
                   </div>
 
                   <div>
