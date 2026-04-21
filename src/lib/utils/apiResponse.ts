@@ -11,6 +11,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   TOKEN_EXPIRED: 'Token has expired',
   INVALID_STAGE: 'Invalid pipeline stage transition',
   AI_UNAVAILABLE: 'AI service is temporarily unavailable',
+  INSUFFICIENT_CONTEXT: 'Insufficient profile data. Please fill out your Experience, Education, or Skills in your Profile.',
 };
 
 export function apiSuccess<T>(data: T, status = 200, meta?: object) {
