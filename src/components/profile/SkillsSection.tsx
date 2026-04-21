@@ -7,7 +7,7 @@
 // Per S1-002 §5.3 — uses controlled inputs throughout.
 // Per S1-003 — auth and ownership enforced on the backend.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,12 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { Skill, Proficiency } from '@/types/skill.types';
 
 const PROFICIENCY_LEVELS: Proficiency[] = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
 
 export function SkillsSection() {
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -33,6 +36,33 @@ export function SkillsSection() {
   const [category, setCategory] = useState('');
   const [proficiency, setProficiency] = useState<Proficiency | ''>('');
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Fetch existing skills on mount.
+  // Auth and ownership enforced server-side per S1-003 §5.4.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSkills = async () => {
+      try {
+        const res = await fetch('/api/skills');
+        if (!res.ok) {
+          if (!cancelled) setError('Could not load skills.');
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) setSkills(data ?? []);
+      } catch {
+        if (!cancelled) setError('Could not load skills.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadSkills();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function resetForm() {
     setSkillName('');
@@ -132,6 +162,22 @@ export function SkillsSection() {
     } catch {
       alert('Failed to delete skill.');
     }
+  }
+
+  // LOADING STATE — skeletons per S1-002 §9.2.
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-5 w-1/4" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
+  }
+
+  // ERROR STATE — human-friendly message per S1-001 §6.3.
+  if (error) {
+    return <p className="text-sm text-red-500">{error}</p>;
   }
 
   return (
