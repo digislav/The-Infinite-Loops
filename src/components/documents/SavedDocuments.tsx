@@ -66,7 +66,10 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
   async function handleCopy(doc: SavedDocument) {
     try {
       const parsed = JSON.parse(doc.content);
-      const text = parsed.body ?? JSON.stringify(parsed, null, 2);
+      const text =
+        doc.type === 'cover_letter'
+          ? `${parsed.name}\n${parsed.location}\n\n${parsed.date}\n\n${parsed.greeting}\n\n${parsed.body}\n\n${parsed.signoff}`
+          : JSON.stringify(parsed, null, 2);
       await navigator.clipboard.writeText(text);
       setCopiedId(doc.id);
       setTimeout(() => setCopiedId(null), 2000);
@@ -169,16 +172,144 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
           {/* Expanded content view */}
           {expandedId === doc.id && (
             <div className="border-t border-gray-100 px-4 py-3">
-              <pre className="text-sm leading-relaxed whitespace-pre-wrap text-gray-700">
-                {(() => {
-                  try {
-                    const parsed = JSON.parse(doc.content);
-                    return parsed.body ?? JSON.stringify(parsed, null, 2);
-                  } catch {
-                    return doc.content;
+              {(() => {
+                try {
+                  const parsed = JSON.parse(doc.content);
+
+                  if (doc.type === 'cover_letter') {
+                    return (
+                      <div className="flex flex-col gap-4 p-4 font-serif text-gray-900">
+                        <div>
+                          <h2 className="text-xl font-bold uppercase">{parsed.name}</h2>
+                          <p className="text-sm">{parsed.location}</p>
+                          {parsed.links && (
+                            <div className="mt-1 flex gap-4 text-xs text-[#2E75B6]">
+                              {parsed.links.linkedin && parsed.links.linkedin !== 'None' && (
+                                <span>{parsed.links.linkedin}</span>
+                              )}
+                              {parsed.links.github && parsed.links.github !== 'None' && (
+                                <span>{parsed.links.github}</span>
+                              )}
+                              {parsed.links.portfolio && parsed.links.portfolio !== 'None' && (
+                                <span>{parsed.links.portfolio}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-sm">{parsed.date}</p>
+                        <p className="text-sm">{parsed.greeting}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{parsed.body}</p>
+                        <p className="text-sm whitespace-pre-wrap">{parsed.signoff}</p>
+                      </div>
+                    );
                   }
-                })()}
-              </pre>
+
+                  // Resume — render full Classic template canvas
+                  return (
+                    <div className="w-full border border-gray-200 bg-white p-8 text-sm text-gray-900">
+                      <div className="mx-auto flex max-w-3xl flex-col gap-6">
+                        <div className="border-b-2 border-gray-900 pb-4 text-center">
+                          <h1 className="font-serif text-2xl font-bold tracking-wide uppercase">
+                            {parsed.name}
+                          </h1>
+                          <p className="mt-1 text-sm font-medium">{parsed.headline}</p>
+                          <p className="mt-0.5 text-xs text-gray-600">{parsed.location}</p>
+                          {parsed.links && (
+                            <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs font-semibold text-[#2E75B6]">
+                              {parsed.links.linkedin && parsed.links.linkedin !== 'None' && (
+                                <span>{parsed.links.linkedin}</span>
+                              )}
+                              {parsed.links.github && parsed.links.github !== 'None' && (
+                                <span>{parsed.links.github}</span>
+                              )}
+                              {parsed.links.portfolio && parsed.links.portfolio !== 'None' && (
+                                <span>{parsed.links.portfolio}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                            Professional Summary
+                          </h2>
+                          <p className="text-sm leading-relaxed">{parsed.summary}</p>
+                        </div>
+
+                        <div>
+                          <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                            Experience
+                          </h2>
+                          <div className="flex flex-col gap-4">
+                            {parsed.experiences?.map(
+                              (
+                                exp: {
+                                  role: string;
+                                  company: string;
+                                  dateRange: string;
+                                  bullets: string[];
+                                },
+                                i: number,
+                              ) => (
+                                <div key={i}>
+                                  <div className="flex items-baseline justify-between">
+                                    <h3 className="text-sm font-bold">{exp.role}</h3>
+                                    <span className="text-xs font-semibold">{exp.dateRange}</span>
+                                  </div>
+                                  <div className="mb-1.5 text-sm italic">{exp.company}</div>
+                                  <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+                                    {exp.bullets?.map((bull: string, j: number) => (
+                                      <li key={j}>{bull}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                            Education
+                          </h2>
+                          <div className="flex flex-col gap-3">
+                            {parsed.education?.map(
+                              (
+                                edu: {
+                                  institution: string;
+                                  degree: string;
+                                  field: string;
+                                  dateRange: string;
+                                },
+                                i: number,
+                              ) => (
+                                <div key={i} className="flex items-baseline justify-between">
+                                  <div>
+                                    <div className="text-sm font-bold">{edu.institution}</div>
+                                    <div className="text-sm italic">
+                                      {edu.degree} in {edu.field}
+                                    </div>
+                                  </div>
+                                  <div className="text-xs font-semibold">{edu.dateRange}</div>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                            Skills
+                          </h2>
+                          <p className="text-sm leading-relaxed">{parsed.skills?.join(', ')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } catch {
+                  return <p className="text-sm whitespace-pre-wrap text-gray-600">{doc.content}</p>;
+                }
+              })()}
             </div>
           )}
         </div>
