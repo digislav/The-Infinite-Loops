@@ -81,12 +81,18 @@ interface CoverLetterGeneratorProps {
   // S2-024: Called after a successful save so the parent can refresh
   // the saved documents list.
   onSaved?: () => void;
+  presetJob?: JobOption;
+  hideJobSelector?: boolean;
 }
 
-export function CoverLetterGenerator({ onSaved }: CoverLetterGeneratorProps) {
+export function CoverLetterGenerator({
+  onSaved,
+  presetJob,
+  hideJobSelector = false,
+}: CoverLetterGeneratorProps) {
   const [jobs, setJobs] = useState<JobOption[]>([]);
-  const [jobsLoading, setJobsLoading] = useState(true);
-  const [selectedJobId, setSelectedJobId] = useState('');
+  const [jobsLoading, setJobsLoading] = useState(!presetJob);
+  const [selectedJobId, setSelectedJobId] = useState(presetJob?.id ?? '');
   const [isGenerating, setIsGenerating] = useState(false);
   const [draft, setDraft] = useState<CoverLetterData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -102,9 +108,26 @@ export function CoverLetterGenerator({ onSaved }: CoverLetterGeneratorProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  useEffect(() => {
+    setSelectedJobId(presetJob?.id ?? '');
+    setDraft(null);
+    setError(null);
+    setCopied(false);
+    setSelectedPreset('');
+    setCustomInstruction('');
+    setRewriteError(null);
+    setSaveStatus('idle');
+  }, [presetJob]);
+
   // Fetch the user's jobs on mount to populate the job selector.
   // Auth and ownership enforced server-side per S1-003 §5.4.
   useEffect(() => {
+    if (presetJob) {
+      setJobs([presetJob]);
+      setJobsLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     const loadJobs = async () => {
@@ -128,7 +151,9 @@ export function CoverLetterGenerator({ onSaved }: CoverLetterGeneratorProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [presetJob]);
+
+  const selectedJob = presetJob ?? jobs.find((job) => job.id === selectedJobId);
 
   // handleGenerate — sends the selected jobId to the backend API.
   // The backend fetches profile and job data server-side —
@@ -240,7 +265,7 @@ export function CoverLetterGenerator({ onSaved }: CoverLetterGeneratorProps) {
     setSaveStatus('idle');
 
     try {
-      const job = jobs.find((j) => j.id === selectedJobId);
+      const job = selectedJob;
       const title = job
         ? `Cover Letter — ${job.job_title} at ${job.company_name}`
         : 'Cover Letter Draft';
@@ -285,38 +310,48 @@ export function CoverLetterGenerator({ onSaved }: CoverLetterGeneratorProps) {
   return (
     <div className="flex flex-col gap-6 print:m-0 print:gap-0">
       {/* Job selector — pick which job to tailor the cover letter for */}
-      <div className="flex flex-col gap-1.5 print:hidden">
-        <Label htmlFor="job-select" className="text-sm font-medium text-gray-700">
-          Select a Job <span className="text-red-500">*</span>
-        </Label>
-        {jobsLoading ? (
-          <Skeleton className="h-10 w-full" />
-        ) : jobs.length === 0 ? (
-          <p className="text-sm text-gray-400">
-            No active jobs found. Add a job to the dashboard first.
+      {!hideJobSelector && (
+        <div className="flex flex-col gap-1.5 print:hidden">
+          <Label htmlFor="job-select" className="text-sm font-medium text-gray-700">
+            Select a Job <span className="text-red-500">*</span>
+          </Label>
+          {jobsLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : jobs.length === 0 ? (
+            <p className="text-sm text-gray-400">
+              No active jobs found. Add a job to the dashboard first.
+            </p>
+          ) : (
+            <Select value={selectedJobId} onValueChange={(val) => setSelectedJobId(val ?? '')}>
+              <SelectTrigger id="job-select" className="w-full">
+                <SelectValue placeholder="Choose a job to tailor this cover letter for...">
+                  {selectedJobId
+                    ? (() => {
+                        const job = jobs.find((j) => j.id === selectedJobId);
+                        return job ? `${job.job_title} — ${job.company_name}` : selectedJobId;
+                      })()
+                    : null}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {jobs.map((job) => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.job_title} — {job.company_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
+
+      {hideJobSelector && selectedJob && (
+        <div className="rounded-md border border-blue-100 bg-blue-50/60 px-4 py-3 print:hidden">
+          <p className="text-sm font-medium text-blue-900">
+            Generating for {selectedJob.job_title} at {selectedJob.company_name}
           </p>
-        ) : (
-          <Select value={selectedJobId} onValueChange={(val) => setSelectedJobId(val ?? '')}>
-            <SelectTrigger id="job-select" className="w-full">
-              <SelectValue placeholder="Choose a job to tailor this cover letter for...">
-                {selectedJobId
-                  ? (() => {
-                      const job = jobs.find((j) => j.id === selectedJobId);
-                      return job ? `${job.job_title} — ${job.company_name}` : selectedJobId;
-                    })()
-                  : null}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {jobs.map((job) => (
-                <SelectItem key={job.id} value={job.id}>
-                  {job.job_title} — {job.company_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Generate button */}
       <div className="flex items-center gap-3 print:hidden">

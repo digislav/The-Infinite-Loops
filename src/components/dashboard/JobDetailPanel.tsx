@@ -3,6 +3,9 @@
 import { InterviewSection } from './InterviewSection';
 import { JobActivityTimeline } from './JobActivityTimeline';
 import { ReminderSection } from './ReminderSection';
+import { CoverLetterGenerator } from '@/components/documents/CoverLetterGenerator';
+import { ResumeGenerator } from '@/components/documents/ResumeGenerator';
+import { SavedDocuments } from '@/components/documents/SavedDocuments';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +25,8 @@ import { Flag, MapPin, Building2, CalendarClock, Pencil, Save } from 'lucide-rea
 import { cn } from '@/lib/utils';
 import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
 import type { JobDetail, PipelineStage } from '@/types/job.types';
+
+type DocumentTool = 'cover_letter' | 'resume' | null;
 
 // Pipeline stage colour tokens — per S1-002 §4.5.
 // Must stay consistent with stageStyles in BoardContent.tsx and
@@ -77,6 +82,8 @@ export function JobDetailPanel({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
+  const [documentRefreshKey, setDocumentRefreshKey] = useState(0);
+  const [activeDocumentTool, setActiveDocumentTool] = useState<DocumentTool>(null);
 
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
@@ -106,8 +113,13 @@ export function JobDetailPanel({
     }
     if (!isOpen) {
       setIsEditing(false);
+      setActiveDocumentTool(null);
     }
   }, [job, isOpen]);
+
+  useEffect(() => {
+    setActiveDocumentTool(null);
+  }, [job?.id]);
 
   async function handleSave() {
     if (!job) return;
@@ -163,6 +175,10 @@ export function JobDetailPanel({
     }
   }
 
+  function handleDocumentSaved() {
+    setDocumentRefreshKey((current) => current + 1);
+  }
+
   const deadlineSoon = isDeadlineSoon(job?.deadline);
   const deadlineOverdue = isDeadlineOverdue(job?.deadline);
 
@@ -174,7 +190,10 @@ export function JobDetailPanel({
       }}
     >
       <DialogContent
-        className="max-h-[85vh] w-full overflow-y-auto sm:max-w-lg"
+        className={cn(
+          'max-h-[85vh] w-full overflow-y-auto',
+          activeDocumentTool ? 'sm:max-w-5xl' : 'sm:max-w-lg',
+        )}
         aria-label="Job detail"
       >
         {/* LOADING STATE — skeletons while data fetches per S1-002 §9.2 */}
@@ -467,6 +486,104 @@ export function JobDetailPanel({
               ) : null}
             </div>
 
+            <div className="mt-5 flex flex-col gap-3 border-b border-gray-100 pb-5 print:hidden">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-sm font-semibold text-gray-700">Document Tools</h3>
+                <p className="text-sm text-gray-500">
+                  Generate a tailored resume or cover letter directly from this job.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant={activeDocumentTool === 'cover_letter' ? 'default' : 'outline'}
+                  onClick={() =>
+                    setActiveDocumentTool((current) =>
+                      current === 'cover_letter' ? null : 'cover_letter',
+                    )
+                  }
+                  className={cn(
+                    activeDocumentTool === 'cover_letter' &&
+                      'bg-[#2E75B6] text-white hover:bg-[#1F4E79]',
+                  )}
+                >
+                  {activeDocumentTool === 'cover_letter'
+                    ? 'Hide Cover Letter Tool'
+                    : 'Generate Cover Letter'}
+                </Button>
+                <Button
+                  type="button"
+                  variant={activeDocumentTool === 'resume' ? 'default' : 'outline'}
+                  onClick={() =>
+                    setActiveDocumentTool((current) => (current === 'resume' ? null : 'resume'))
+                  }
+                  className={cn(
+                    activeDocumentTool === 'resume' && 'bg-[#2E75B6] text-white hover:bg-[#1F4E79]',
+                  )}
+                >
+                  {activeDocumentTool === 'resume' ? 'Hide Resume Tool' : 'Generate Resume'}
+                </Button>
+              </div>
+
+              {activeDocumentTool === 'cover_letter' && (
+                <div className="rounded-lg border border-gray-200 bg-white p-4">
+                  <div className="mb-4 flex flex-col gap-1">
+                    <h4 className="text-base font-semibold text-gray-900">Cover Letter</h4>
+                    <p className="text-sm text-gray-500">
+                      Uses this job card as the target role and saves drafts to the document
+                      library.
+                    </p>
+                  </div>
+                  <CoverLetterGenerator
+                    onSaved={handleDocumentSaved}
+                    presetJob={{
+                      id: job.id,
+                      job_title: job.title,
+                      company_name: job.company,
+                      current_stage: job.pipelineStage,
+                    }}
+                    hideJobSelector
+                  />
+                </div>
+              )}
+
+              {activeDocumentTool === 'resume' && (
+                <div className="rounded-lg border border-gray-200 bg-white p-4">
+                  <div className="mb-4 flex flex-col gap-1">
+                    <h4 className="text-base font-semibold text-gray-900">Resume</h4>
+                    <p className="text-sm text-gray-500">
+                      Tailors your resume against this job and saves drafts to the document library.
+                    </p>
+                  </div>
+                  <ResumeGenerator
+                    onSaved={handleDocumentSaved}
+                    presetJob={{
+                      id: job.id,
+                      job_title: job.title,
+                      company_name: job.company,
+                      current_stage: job.pipelineStage,
+                    }}
+                    hideJobSelector
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex flex-col gap-3 border-b border-gray-100 pb-5">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-sm font-semibold text-gray-700">Saved Documents</h3>
+                <p className="text-sm text-gray-500">
+                  Documents linked to this job also remain available in the document library.
+                </p>
+              </div>
+              <SavedDocuments
+                refreshKey={documentRefreshKey}
+                jobId={job.id}
+                emptyMessage="No saved documents are linked to this job yet."
+              />
+            </div>
+
             {/* NOTES SECTION — recruiter notes and custom notes */}
             {isEditing ? (
               <div className="mt-5 flex flex-col gap-5 border-b border-gray-100 pb-5">
@@ -529,7 +646,10 @@ export function JobDetailPanel({
               <InterviewSection jobId={job.id} />
             </div>
 
-            <ReminderSection jobId={job.id} onReminderSaved={() => setActivityRefreshKey((prev) => prev + 1)} />
+            <ReminderSection
+              jobId={job.id}
+              onReminderSaved={() => setActivityRefreshKey((prev) => prev + 1)}
+            />
 
             {/* S2-010: Activity Timeline — shows all stage changes, interviews,
     and note updates for this job in reverse chronological order.

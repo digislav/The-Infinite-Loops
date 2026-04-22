@@ -25,9 +25,15 @@ interface SavedDocument {
 interface SavedDocumentsProps {
   // refreshKey increments when a new document is saved so the list re-fetches.
   refreshKey: number;
+  jobId?: string;
+  emptyMessage?: string;
 }
 
-export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
+export function SavedDocuments({
+  refreshKey,
+  jobId,
+  emptyMessage = 'No saved documents yet. Generate a cover letter or resume and save it.',
+}: SavedDocumentsProps) {
   const [documents, setDocuments] = useState<SavedDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +48,8 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
     const loadDocuments = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/documents');
+        const url = jobId ? `/api/documents?jobId=${encodeURIComponent(jobId)}` : '/api/documents';
+        const res = await fetch(url);
         if (!res.ok) {
           if (!cancelled) setError('Could not load saved documents.');
           return;
@@ -60,7 +67,7 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
     return () => {
       cancelled = true;
     };
-  }, [refreshKey]);
+  }, [jobId, refreshKey]);
 
   // handleCopy — copies the document content to clipboard.
   async function handleCopy(doc: SavedDocument) {
@@ -129,11 +136,7 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
 
   // EMPTY STATE — per S1-002 §5.7.
   if (documents.length === 0) {
-    return (
-      <p className="text-sm text-gray-400">
-        No saved documents yet. Generate a cover letter or resume and save it.
-      </p>
-    );
+    return <p className="text-sm text-gray-400">{emptyMessage}</p>;
   }
 
   return (
