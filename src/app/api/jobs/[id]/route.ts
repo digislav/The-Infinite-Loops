@@ -50,7 +50,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 // Protected route — updates a job record owned by the authenticated user.
 // Per S1-003 §5.4 — user_id is stripped from the request body and
 // ownership is enforced in the updateJob service query.
-
+//show for b1.4
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
@@ -76,11 +76,11 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     const { data, error } = await updateJob(id, user.id, safeBody);
 
     if (error) return apiError('INTERNAL_ERROR', 500);
-    
+
     // for cache issues
     revalidatePath('/dashboard');
     revalidatePath('/');
-    
+
     return apiSuccess(data);
   } catch {
     return apiError('INTERNAL_ERROR', 500);

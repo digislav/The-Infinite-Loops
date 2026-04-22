@@ -123,6 +123,7 @@ export async function createJob(userId: string, jobData: Partial<Job>) {
 // Activity recording happens AFTER the update succeeds — this prevents
 // orphaned activity records if the update fails or the job doesn't
 // belong to this user per S1-003 §5.2.
+//show for b1.4
 export async function updateJob(id: string, userId: string, updates: Partial<Job>) {
   const supabase = await createClient();
 

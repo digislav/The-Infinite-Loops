@@ -27,6 +27,7 @@ const COMPLETE_PROFILE: Profile = {
 
 describe('calculateCompletion', () => {
   // HAPPY PATH — all required fields filled returns 100%.
+  //test for profile completion logic
   it('returns 100 when all required fields are filled', () => {
     expect(calculateCompletion(COMPLETE_PROFILE)).toBe(100);
   });
