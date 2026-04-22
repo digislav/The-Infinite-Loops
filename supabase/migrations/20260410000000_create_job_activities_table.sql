@@ -41,35 +41,53 @@ END $$;
 -- Policy: Users can INSERT activities only for jobs THEY own
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
-    WHERE policyname = 'Users can view activities for own jobs'
+    SELECT 1 FROM pg_policies
+    WHERE policyname = 'Users can insert activities for own jobs'
     AND tablename = 'job_activities'
   ) THEN
-    CREATE POLICY "Users can view activities for own jobs"
-    ON public.job_activities FOR SELECT
-    USING (
+    CREATE POLICY "Users can insert activities for own jobs"
+    ON public.job_activities FOR INSERT
+    WITH CHECK (
       EXISTS (
-        SELECT 1 FROM public.jobs 
-        WHERE jobs.id = job_activities.job_id 
+        SELECT 1 FROM public.jobs
+        WHERE jobs.id = job_activities.job_id
         AND jobs.user_id = auth.uid()
       )
     );
   END IF;
 END $$;
 
--- Policy: Users can DELETE/UPDATE activities only for jobs THEY own
+-- Policy: Users can UPDATE/DELETE activities only for jobs THEY own
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
-    WHERE policyname = 'Users can view activities for own jobs'
+    SELECT 1 FROM pg_policies
+    WHERE policyname = 'Users can update activities for own jobs'
     AND tablename = 'job_activities'
   ) THEN
-    CREATE POLICY "Users can view activities for own jobs"
-    ON public.job_activities FOR SELECT
+    CREATE POLICY "Users can update activities for own jobs"
+    ON public.job_activities FOR UPDATE
     USING (
       EXISTS (
-        SELECT 1 FROM public.jobs 
-        WHERE jobs.id = job_activities.job_id 
+        SELECT 1 FROM public.jobs
+        WHERE jobs.id = job_activities.job_id
+        AND jobs.user_id = auth.uid()
+      )
+    );
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE policyname = 'Users can delete activities for own jobs'
+    AND tablename = 'job_activities'
+  ) THEN
+    CREATE POLICY "Users can delete activities for own jobs"
+    ON public.job_activities FOR DELETE
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.jobs
+        WHERE jobs.id = job_activities.job_id
         AND jobs.user_id = auth.uid()
       )
     );
