@@ -20,7 +20,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Flag, MapPin, Building2, CalendarClock, Pencil, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
+import { formatDeadline, toLocalISOWithOffset, formatTimestamp } from '@/lib/utils/dateFormatters';
 import type { JobDetail, PipelineStage } from '@/types/job.types';
 
 // Pipeline stage colour tokens — per S1-002 §4.5.
@@ -83,7 +83,8 @@ export function JobDetailPanel({
   const [location, setLocation] = useState('');
   const [pipelineStage, setPipelineStage] = useState<PipelineStage>('Interested');
   const [priorityFlag, setPriorityFlag] = useState(false);
-  const [deadlineStr, setDeadlineStr] = useState('');
+  const [deadlineDateStr, setDeadlineDateStr] = useState('');
+  const [deadlineTimeStr, setDeadlineTimeStr] = useState('');
   const [description, setDescription] = useState('');
   const [compensationNotes, setCompensationNotes] = useState('');
   const [recruiterNotes, setRecruiterNotes] = useState('');
@@ -97,7 +98,26 @@ export function JobDetailPanel({
       setLocation(job.location);
       setPipelineStage(job.pipelineStage);
       setPriorityFlag(job.priorityFlag ?? false);
-      setDeadlineStr(job.deadline ? job.deadline.split('T')[0] : '');
+      if (job.deadline) {
+        const d = new Date(job.deadline);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        setDeadlineDateStr(`${year}-${month}-${day}`);
+        const hours = d.getHours();
+        const minutes = d.getMinutes();
+        // Default to 08:00 if no explicit time is stored (midnight = date-only entry).
+        if (hours !== 0 || minutes !== 0) {
+          setDeadlineTimeStr(
+            `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
+          );
+        } else {
+          setDeadlineTimeStr('08:00');
+        }
+      } else {
+        setDeadlineDateStr('');
+        setDeadlineTimeStr('08:00');
+      }
       setDescription(job.description ?? '');
       setCompensationNotes(job.compensationNotes ?? '');
       setRecruiterNotes(job.recruiterNotes ?? '');
@@ -122,7 +142,13 @@ export function JobDetailPanel({
         // activity when the user only updated notes or other fields.
         ...(pipelineStage !== job.pipelineStage && { current_stage: pipelineStage }),
         is_priority: priorityFlag,
-        deadline: deadlineStr || undefined,
+        // Combine date + optional time into a single datetime string.
+        // If only a date is provided, toLocalISOWithOffset defaults the time to 8 AM.
+        deadline: deadlineDateStr
+          ? toLocalISOWithOffset(
+              deadlineTimeStr ? `${deadlineDateStr}T${deadlineTimeStr}` : deadlineDateStr,
+            )
+          : undefined,
         description: description || undefined,
         compensation_notes: compensationNotes || undefined,
         recruiter_notes: recruiterNotes || undefined,
@@ -146,7 +172,11 @@ export function JobDetailPanel({
         location,
         pipelineStage,
         priorityFlag,
-        deadline: deadlineStr ? new Date(deadlineStr).toISOString() : undefined,
+        deadline: deadlineDateStr
+          ? toLocalISOWithOffset(
+              deadlineTimeStr ? `${deadlineDateStr}T${deadlineTimeStr}` : deadlineDateStr,
+            )
+          : undefined,
         description,
         compensationNotes,
         recruiterNotes,
@@ -174,7 +204,7 @@ export function JobDetailPanel({
       }}
     >
       <DialogContent
-        className="max-h-[85vh] w-full overflow-y-auto sm:max-w-lg"
+        className="max-h-[85vh] w-full overflow-y-auto sm:max-w-3xl"
         aria-label="Job detail"
       >
         {/* LOADING STATE — skeletons while data fetches per S1-002 §9.2 */}
@@ -396,16 +426,37 @@ export function JobDetailPanel({
               {/* Deadline — colour-coded for urgency per S1-002 §4.3 */}
               {isEditing ? (
                 <div className="mt-2 flex flex-col gap-1.5">
-                  <Label htmlFor="deadline" className="text-xs text-gray-500">
+                  <Label htmlFor="deadline-date" className="text-xs text-gray-500">
                     Deadline
                   </Label>
-                  <Input
-                    id="deadline"
-                    type="date"
-                    value={deadlineStr}
-                    onChange={(e) => setDeadlineStr(e.target.value)}
-                    className="w-full sm:w-1/2"
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="deadline-date"
+                      type="date"
+                      value={deadlineDateStr}
+                      onChange={(e) => setDeadlineDateStr(e.target.value)}
+                      className="w-full sm:w-1/3"
+                    />
+                    <Input
+                      id="deadline-time"
+                      type="time"
+                      value={deadlineTimeStr}
+                      onChange={(e) => setDeadlineTimeStr(e.target.value)}
+                      className="w-full sm:w-1/4"
+                    />
+                  </div>
+                  {deadlineDateStr &&
+                    (() => {
+                      const [year, month, day] = deadlineDateStr.split('-').map(Number);
+                      const selected = new Date(year, month - 1, day);
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return selected < today;
+                    })() && (
+                      <p className="animate-in fade-in slide-in-from-top-1 text-xs font-medium text-amber-600">
+                        ⚠ This deadline is set in the past.
+                      </p>
+                    )}
                 </div>
               ) : job.deadline ? (
                 <div
@@ -416,7 +467,7 @@ export function JobDetailPanel({
                     !deadlineSoon && !deadlineOverdue && 'text-gray-500',
                   )}
                 >
-                  Deadline: {formatDateOnly(job.deadline)}
+                  Deadline: {formatDeadline(job.deadline)}
                   {deadlineOverdue && ' (Overdue)'}
                   {deadlineSoon && !deadlineOverdue && ' (Soon)'}
                 </div>
@@ -529,7 +580,10 @@ export function JobDetailPanel({
               <InterviewSection jobId={job.id} />
             </div>
 
-            <ReminderSection jobId={job.id} onReminderSaved={() => setActivityRefreshKey((prev) => prev + 1)} />
+            <ReminderSection
+              jobId={job.id}
+              onReminderSaved={() => setActivityRefreshKey((prev) => prev + 1)}
+            />
 
             {/* S2-010: Activity Timeline — shows all stage changes, interviews,
     and note updates for this job in reverse chronological order.

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatTimestamp } from '@/lib/utils/dateFormatters';
+import { cn } from '@/lib/utils';
 
 interface ReminderSectionProps {
   jobId: string;
@@ -74,6 +75,11 @@ export function ReminderSection({ jobId, onReminderSaved }: ReminderSectionProps
       setFormError('Please select a reminder date and time.');
       return;
     }
+    // Hard block — reject past datetimes regardless of what the browser allowed.
+    if (new Date(reminderDate).getTime() < Date.now()) {
+      setFormError('Reminder must be set in the future.');
+      return;
+    }
     setIsSaving(true);
     setFormError(null);
 
@@ -137,12 +143,35 @@ export function ReminderSection({ jobId, onReminderSaved }: ReminderSectionProps
               id="reminder-date"
               type="datetime-local"
               value={reminderDate}
+              min={(() => {
+                const now = new Date();
+                const y = now.getFullYear();
+                const mo = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+                const h = String(now.getHours()).padStart(2, '0');
+                const mi = String(now.getMinutes()).padStart(2, '0');
+                return `${y}-${mo}-${d}T${h}:${mi}`;
+              })()}
               onChange={(e) => {
-                setReminderDate(e.target.value);
-                setFormError(null);
+                const val = e.target.value;
+                setReminderDate(val);
+                if (val && new Date(val).getTime() < Date.now()) {
+                  setFormError('Reminder must be set in the future.');
+                } else {
+                  setFormError(null);
+                }
               }}
-              className="text-sm"
+              className={cn(
+                'text-sm',
+                formError === 'Reminder must be set in the future.' &&
+                  'border-red-500 focus-visible:ring-red-500',
+              )}
             />
+            {formError === 'Reminder must be set in the future.' && (
+              <p className="animate-in fade-in slide-in-from-top-1 text-[11px] font-medium text-red-600">
+                {formError}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -158,7 +187,9 @@ export function ReminderSection({ jobId, onReminderSaved }: ReminderSectionProps
             />
           </div>
 
-          {formError && <p className="text-xs text-red-600">{formError}</p>}
+          {formError && formError !== 'Reminder must be set in the future.' && (
+            <p className="text-xs text-red-600">{formError}</p>
+          )}
 
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={handleCancel} className="text-xs">
