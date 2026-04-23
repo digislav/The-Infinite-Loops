@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { formatTimestamp } from '@/lib/utils/dateFormatters';
-import { cn } from '@/lib/utils';
 
 interface ReminderSectionProps {
   jobId: string;
