@@ -241,6 +241,18 @@ export function InterviewSection({ jobId }: InterviewSectionProps) {
               onChange={(e) => setInterviewDate(e.target.value)}
               className="h-8 text-xs"
             />
+            {interviewDate &&
+              (() => {
+                const [year, month, day] = interviewDate.split('T')[0].split('-').map(Number);
+                const selected = new Date(year, month - 1, day);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return selected < today;
+              })() && (
+                <p className="animate-in fade-in slide-in-from-top-1 text-[11px] font-medium text-amber-600">
+                  ⚠ This interview date is set in the past.
+                </p>
+              )}
           </div>
 
           {/* Location / Zoom URL — optional field */}

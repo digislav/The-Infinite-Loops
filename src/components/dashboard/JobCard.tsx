@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Flag, CalendarClock, MapPin, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDeadline } from '@/lib/utils/dateFormatters';
 import type { Job, PipelineStage } from '@/types/job.types';
 
 const stageStyles: Record<PipelineStage, string> = {
@@ -104,7 +105,7 @@ export function JobCard({ job, onClick }: JobCardProps) {
                 !deadlineSoon && !deadlineOverdue && 'text-gray-400',
               )}
             >
-              Due {job.deadline}
+              Due {formatDeadline(job.deadline)}
             </span>
           )}
         </div>
