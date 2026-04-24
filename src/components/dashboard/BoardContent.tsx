@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Flag } from 'lucide-react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
+import { formatDeadline, formatTimestamp } from '@/lib/utils/dateFormatters';
 import type { Job, PipelineStage, JobRecord } from '@/types/job.types';
 import { toUIJob } from '@/types/job.types';
 import {
@@ -119,7 +119,10 @@ export function BoardContent({
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
 
-  const [pendingOutcome, setPendingOutcome] = useState<{ jobId: string; stage: PipelineStage } | null>(null);
+  const [pendingOutcome, setPendingOutcome] = useState<{
+    jobId: string;
+    stage: PipelineStage;
+  } | null>(null);
   const [modalOutcomeNotes, setModalOutcomeNotes] = useState('');
   const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false);
 
@@ -235,7 +238,7 @@ export function BoardContent({
       setModalOutcomeNotes('');
       return;
     }
-    
+
     try {
       const res = await fetch(`/api/jobs/${jobId}`, {
         method: 'PUT',
@@ -507,7 +510,7 @@ export function BoardContent({
                     {job.deadline ? (
                       <div className="flex flex-col gap-1">
                         <span className="text-sm text-gray-500">
-                          {formatDateOnly(job.deadline)}
+                          {formatDeadline(job.deadline)}
                         </span>
                         <UrgencyBadge deadline={job.deadline} />
                       </div>
@@ -568,22 +571,34 @@ export function BoardContent({
           </DialogHeader>
           <div className="flex flex-col gap-3 py-4">
             <p className="text-sm text-gray-500">
-              You are moving this job to <strong className="text-gray-900">{pendingOutcome?.stage}</strong>. Would you like to record any final notes?
+              You are moving this job to{' '}
+              <strong className="text-gray-900">{pendingOutcome?.stage}</strong>. Would you like to
+              record any final notes?
             </p>
             <div className="grid w-full items-center gap-1.5">
-              <Label htmlFor="inlineOutcomeNotes" className="font-semibold text-gray-700">Notes (Optional)</Label>
+              <Label htmlFor="inlineOutcomeNotes" className="font-semibold text-gray-700">
+                Notes (Optional)
+              </Label>
               <textarea
                 id="inlineOutcomeNotes"
                 value={modalOutcomeNotes}
                 onChange={(e) => setModalOutcomeNotes(e.target.value)}
-                placeholder={pendingOutcome?.stage === 'Offer' ? "What are the offer details? e.g. $120k / Remote" : `Why did they mark you as ${pendingOutcome?.stage}?`}
-                className="mt-1.5 flex min-h-[80px] w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+                placeholder={
+                  pendingOutcome?.stage === 'Offer'
+                    ? 'What are the offer details? e.g. $120k / Remote'
+                    : `Why did they mark you as ${pendingOutcome?.stage}?`
+                }
+                className="mt-1.5 flex min-h-[80px] w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:outline-none"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingOutcome(null)}>Cancel</Button>
-            <Button onClick={submitOutcome} disabled={isSubmittingOutcome}>Save Outcome</Button>
+            <Button variant="outline" onClick={() => setPendingOutcome(null)}>
+              Cancel
+            </Button>
+            <Button onClick={submitOutcome} disabled={isSubmittingOutcome}>
+              Save Outcome
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

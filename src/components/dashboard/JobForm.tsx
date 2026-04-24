@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Trash2 } from 'lucide-react';
+import { toLocalISOWithOffset } from '@/lib/utils/dateFormatters';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -62,6 +63,7 @@ export const jobFormSchema = z.object({
     'Archived',
   ] as const),
   deadline: z.string().optional(),
+  deadlineTime: z.string().optional(),
   priorityFlag: z.boolean(),
 });
 
@@ -102,7 +104,17 @@ export function JobForm({ job, onSubmit, onCancel, onDelete }: JobFormProps) {
       company: job?.company ?? '',
       location: job?.location ?? '',
       pipelineStage: job?.pipelineStage ?? 'Interested',
-      deadline: job?.deadline ?? '',
+      deadline: job?.deadline ? new Date(job.deadline).toISOString().split('T')[0] : '',
+      deadlineTime: job?.deadline
+        ? (() => {
+            const d = new Date(job.deadline);
+            const h = d.getHours();
+            const m = d.getMinutes();
+            return h !== 0 || m !== 0
+              ? `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+              : '08:00';
+          })()
+        : '08:00',
       priorityFlag: job?.priorityFlag ?? false,
     },
   });
@@ -117,12 +129,27 @@ export function JobForm({ job, onSubmit, onCancel, onDelete }: JobFormProps) {
       company: job?.company ?? '',
       location: job?.location ?? '',
       pipelineStage: job?.pipelineStage ?? 'Interested',
-      deadline: job?.deadline ?? '',
+      deadline: job?.deadline ? new Date(job.deadline).toISOString().split('T')[0] : '',
+      deadlineTime: job?.deadline
+        ? (() => {
+            const d = new Date(job.deadline);
+            const h = d.getHours();
+            const m = d.getMinutes();
+            return h !== 0 || m !== 0
+              ? `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+              : '08:00';
+          })()
+        : '08:00',
       priorityFlag: job?.priorityFlag ?? false,
     });
   }, [job, form]);
 
   async function handleSubmit(values: JobFormValues): Promise<void> {
+    // Merge date + time into a single ISO string with local offset before submitting.
+    if (values.deadline) {
+      const time = values.deadlineTime || '08:00';
+      values.deadline = toLocalISOWithOffset(`${values.deadline}T${time}`);
+    }
     await onSubmit(values);
   }
 
@@ -191,11 +218,7 @@ export function JobForm({ job, onSubmit, onCancel, onDelete }: JobFormProps) {
               <FormLabel>
                 Pipeline Stage <span className="text-red-500">*</span>
               </FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                value={field.value}
-                disabled={isSubmitting}
-              >
+              <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a stage" />
@@ -222,7 +245,22 @@ export function JobForm({ job, onSubmit, onCancel, onDelete }: JobFormProps) {
             <FormItem>
               <FormLabel>Application Deadline</FormLabel>
               <FormControl>
-                <Input type="date" disabled={isSubmitting} {...field} />
+                <div className="flex items-center gap-2">
+                  <Input type="date" disabled={isSubmitting} {...field} className="w-1/2" />
+                  <FormField
+                    control={form.control}
+                    name="deadlineTime"
+                    render={({ field: timeField }) => (
+                      <Input
+                        id="deadline-time"
+                        type="time"
+                        disabled={isSubmitting || !field.value}
+                        {...timeField}
+                        className="w-1/3"
+                      />
+                    )}
+                  />
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
