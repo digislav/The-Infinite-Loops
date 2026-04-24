@@ -46,7 +46,7 @@ describe('formatTimestamp', () => {
   it('formats a UTC timestamp to a valid m/d/yy string', () => {
     // 2026-04-07T12:00:00Z is noon UTC = 8am EST — still April 7 in EST
     const result = formatTimestamp('2026-04-07T12:00:00.000Z');
-    expect(result).toBe('4/7/26');
+    expect(result).toBe('4/7/26, 8:00 AM');
   });
 });
 
