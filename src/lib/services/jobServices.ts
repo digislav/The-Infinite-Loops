@@ -257,8 +257,27 @@ export async function addInterview(userId: string, jobId: string, data: Partial<
     .single();
 }
 
+// POST reminder — saves a new reminder event for a job.
+// Mirrors addInterview S2-011 fix: ownership of the parent job is verified before inserting.
+// Per S1-003 §5.2 — ownership must be verified at the service layer.
 export async function addReminder(userId: string, jobId: string, data: Partial<JobActivity>) {
   const supabase = await createClient();
+
+  // Verify the caller owns the parent job before inserting.
+  // Per S1-003 §4.3 — child entity ownership verified through parent.
+  const { data: job } = await supabase
+    .from('jobs')
+    .select('id')
+    .eq('id', jobId)
+    .eq('user_id', userId)
+    .single();
+
+  // Return a safe error if ownership check fails.
+  // Per S1-003 §5.5 — route handler will return 404.
+  if (!job) {
+    return { data: null, error: { message: 'Job not found or not owned by user' } };
+  }
+
   return await supabase
     .from('job_activities')
     .insert({

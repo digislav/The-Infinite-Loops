@@ -101,6 +101,13 @@ export function SkillsSection() {
       setFormError('Skill name is required.');
       return false;
     }
+    const isDuplicate = skills.some(
+      (s) => s.skill_name.toLowerCase() === skillName.trim().toLowerCase() && s.id !== editingId,
+    );
+    if (isDuplicate) {
+      setFormError('You already have a skill with that name.');
+      return false;
+    }
     return true;
   }
 
@@ -129,7 +136,8 @@ export function SkillsSection() {
       });
 
       if (!res.ok) {
-        setFormError('Failed to save skill. Please try again.');
+        const errJson = await res.json().catch(() => null);
+        setFormError(errJson?.error ?? 'Failed to save skill. Please try again.');
         return;
       }
 

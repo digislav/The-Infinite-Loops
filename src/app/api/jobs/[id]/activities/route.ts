@@ -54,10 +54,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
   }
 }
 
-export async function POST(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
     const supabase = await createClient();
@@ -67,6 +64,11 @@ export async function POST(
     } = await supabase.auth.getUser();
 
     if (authError || !user) return apiError('AUTH_REQUIRED', 401);
+
+    // Verify the caller owns the parent job before proceeding.
+    // Per S1-003 §4.3 — child entity ownership verified through parent.
+    const { data: job, error: jobError } = await getJobById(id, user.id);
+    if (jobError || !job) return apiError('NOT_FOUND', 404);
 
     const body = await req.json();
     if (!body.reminder_date) {
