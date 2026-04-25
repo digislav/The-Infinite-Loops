@@ -1,0 +1,244 @@
+__tests__/BoardControls.test.ts(31,20): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+__tests__/BoardControls.test.ts(36,20): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+__tests__/BoardControls.test.ts(37,55): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/BoardControls.test.ts(42,20): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+__tests__/BoardControls.test.ts(43,50): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/BoardControls.test.ts(48,20): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+__tests__/BoardControls.test.ts(49,36): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/BoardControls.test.ts(58,20): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+__tests__/BoardControls.test.ts(59,37): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/BoardControls.test.ts(60,32): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/BoardControls.test.ts(65,20): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+__tests__/careerPreferences.test.ts(32,36): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/careerPreferences.test.ts(39,24): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/careerPreferences.test.ts(40,14): error TS2339: Property 'objectContaining' does not exist on type 'ExpectStatic'.
+__tests__/dashboardMetrics.test.ts(49,50): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/dashboardMetrics.test.ts(56,50): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/dashboardMetrics.test.ts(63,50): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/dashboardMetrics.test.ts(69,50): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/dashboardMetrics.test.ts(75,50): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/dashboardMetrics.test.ts(84,51): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/dashboardMetrics.test.ts(89,51): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/dashboardMetrics.test.ts(94,51): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/dashboardMetrics.test.ts(99,51): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/dashboardMetrics.test.ts(107,48): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/dashboardMetrics.test.ts(112,48): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/deleteFlow.test.ts(24,29): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/deleteFlow.test.ts(25,45): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/deleteFlow.test.ts(37,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/deleteFlow.test.ts(51,26): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/deleteFlow.test.ts(59,23): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/documentExport.test.ts(23,18): error TS2551: Property 'toContain' does not exist on type 'Assertion'. Did you mean 'contain'?
+__tests__/documentExport.test.ts(24,18): error TS2551: Property 'toContain' does not exist on type 'Assertion'. Did you mean 'contain'?
+__tests__/documentExport.test.ts(25,18): error TS2551: Property 'toContain' does not exist on type 'Assertion'. Did you mean 'contain'?
+__tests__/documentExport.test.ts(26,18): error TS2551: Property 'toContain' does not exist on type 'Assertion'. Did you mean 'contain'?
+__tests__/documentExport.test.ts(59,18): error TS2551: Property 'toContain' does not exist on type 'Assertion'. Did you mean 'contain'?
+__tests__/documentExport.test.ts(60,18): error TS2551: Property 'toContain' does not exist on type 'Assertion'. Did you mean 'contain'?
+__tests__/documentExport.test.ts(61,18): error TS2551: Property 'toContain' does not exist on type 'Assertion'. Did you mean 'contain'?
+__tests__/documentExport.test.ts(62,18): error TS2551: Property 'toContain' does not exist on type 'Assertion'. Did you mean 'contain'?
+__tests__/documentExport.test.ts(63,18): error TS2551: Property 'toContain' does not exist on type 'Assertion'. Did you mean 'contain'?
+__tests__/documentExport.test.ts(74,7): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(77,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/educationService.test.ts(78,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(85,29): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(92,26): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(107,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/educationService.test.ts(108,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(122,24): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(122,52): error TS2339: Property 'objectContaining' does not exist on type 'ExpectStatic'.
+__tests__/educationService.test.ts(135,26): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(144,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/educationService.test.ts(151,28): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(152,32): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(159,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(168,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(175,28): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/educationService.test.ts(176,32): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(77,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/experience.test.ts(78,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(85,29): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(92,26): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(101,7): error TS2353: Object literal may only specify known properties, and 'institution' does not exist in type 'Partial<Experience>'.
+__tests__/experience.test.ts(107,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/experience.test.ts(108,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(116,7): error TS2353: Object literal may only specify known properties, and 'institution' does not exist in type 'Partial<Experience>'.
+__tests__/experience.test.ts(122,24): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(122,52): error TS2339: Property 'objectContaining' does not exist on type 'ExpectStatic'.
+__tests__/experience.test.ts(129,7): error TS2353: Object literal may only specify known properties, and 'institution' does not exist in type 'Partial<Experience>'.
+__tests__/experience.test.ts(135,26): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(143,68): error TS2353: Object literal may only specify known properties, and 'institution' does not exist in type 'Partial<Experience>'.
+__tests__/experience.test.ts(144,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/experience.test.ts(150,53): error TS2353: Object literal may only specify known properties, and 'institution' does not exist in type 'Partial<Experience>'.
+__tests__/experience.test.ts(151,28): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(152,32): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(158,70): error TS2353: Object literal may only specify known properties, and 'institution' does not exist in type 'Partial<Experience>'.
+__tests__/experience.test.ts(159,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(168,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(175,28): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/experience.test.ts(176,32): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(78,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/interviewSection.test.ts(79,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(89,25): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(90,26): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(99,32): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(108,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/interviewSection.test.ts(117,26): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(118,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(135,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/interviewSection.test.ts(136,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(149,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(151,28): error TS2339: Property 'toHaveBeenCalled' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(162,24): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(163,14): error TS2339: Property 'objectContaining' does not exist on type 'ExpectStatic'.
+__tests__/interviewSection.test.ts(179,26): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/interviewSection.test.ts(180,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/jobActivityTimeline.test.ts(60,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/jobActivityTimeline.test.ts(61,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/jobActivityTimeline.test.ts(72,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/jobActivityTimeline.test.ts(83,25): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/jobActivityTimeline.test.ts(85,26): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/jobActivityTimeline.test.ts(97,26): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/jobActivityTimeline.test.ts(98,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/jobActivityTimeline.test.ts(107,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/jobActivityTimeline.test.ts(108,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/jobDetail.test.ts(59,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/jobDetail.test.ts(60,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/jobDetail.test.ts(76,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/jobDetail.test.ts(88,22): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/jobDetail.test.ts(90,26): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/jobDetail.test.ts(105,26): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/jobDetail.test.ts(106,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/jobDetail.test.ts(121,26): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(38,26): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(39,28): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(40,32): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(41,38): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(42,35): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(43,32): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(49,32): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(63,32): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(64,38): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(65,35): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(66,32): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(67,32): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobDetailPanel.test.ts(74,33): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/JobFormModal.test.tsx(21,26): error TS2339: Property 'toBeTruthy' does not exist on type 'Assertion'.
+__tests__/JobFormModal.test.tsx(26,24): error TS2339: Property 'toHaveBeenCalledTimes' does not exist on type 'Assertion'.
+__tests__/JobFormModal.test.tsx(29,22): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/JobFormModal.test.tsx(51,63): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+__tests__/JobFormModal.test.tsx(52,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+__tests__/JobFormModal.test.tsx(53,26): error TS2339: Property 'toHaveBeenCalled' does not exist on type 'Assertion'.
+__tests__/JobFormModal.test.tsx(83,24): error TS2339: Property 'toHaveBeenCalledTimes' does not exist on type 'Assertion'.
+__tests__/JobFormModal.test.tsx(86,24): error TS2551: Property 'toBeDisabled' does not exist on type 'Assertion'. Did you mean 'disabled'?
+__tests__/JobFormModal.test.tsx(87,26): error TS2551: Property 'toBeDisabled' does not exist on type 'Assertion'. Did you mean 'disabled'?
+__tests__/JobFormModal.test.tsx(88,27): error TS2551: Property 'toBeDisabled' does not exist on type 'Assertion'. Did you mean 'disabled'?
+__tests__/JobFormModal.test.tsx(89,26): error TS2551: Property 'toBeDisabled' does not exist on type 'Assertion'. Did you mean 'disabled'?
+__tests__/JobFormModal.test.tsx(90,26): error TS2551: Property 'toBeDisabled' does not exist on type 'Assertion'. Did you mean 'disabled'?
+__tests__/JobFormModal.test.tsx(105,63): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+__tests__/JobFormModal.test.tsx(110,71): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(12,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(17,56): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(21,39): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(25,32): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(29,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(39,40): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(43,33): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(49,20): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(73,36): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(77,39): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(81,41): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(85,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(89,47): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(93,46): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(97,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(102,38): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(107,46): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(112,42): error TS2551: Property 'toBeUndefined' does not exist on type 'Assertion'. Did you mean 'undefined'?
+__tests__/jobs.test.ts(132,28): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(142,28): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(147,28): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(150,28): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(156,28): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(159,30): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(165,28): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(172,30): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(178,28): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobs.test.ts(180,40): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(66,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/jobWorkflow.test.ts(67,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(78,34): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(79,14): error TS2339: Property 'objectContaining' does not exist on type 'ExpectStatic'.
+__tests__/jobWorkflow.test.ts(96,34): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(97,14): error TS2339: Property 'objectContaining' does not exist on type 'ExpectStatic'.
+__tests__/jobWorkflow.test.ts(114,38): error TS2339: Property 'toHaveBeenCalled' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(124,26): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(125,30): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(134,26): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(135,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(148,22): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+__tests__/jobWorkflow.test.ts(148,26): error TS2339: Property 'activity_type' does not exist on type 'never'.
+__tests__/jobWorkflow.test.ts(150,24): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(165,34): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(166,14): error TS2339: Property 'objectContaining' does not exist on type 'ExpectStatic'.
+__tests__/jobWorkflow.test.ts(184,34): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(185,14): error TS2339: Property 'objectContaining' does not exist on type 'ExpectStatic'.
+__tests__/jobWorkflow.test.ts(197,38): error TS2339: Property 'toHaveBeenCalled' does not exist on type 'Assertion'.
+__tests__/jobWorkflow.test.ts(208,22): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+__tests__/jobWorkflow.test.ts(208,26): error TS2339: Property 'activity_type' does not exist on type 'never'.
+__tests__/jobWorkflow.test.ts(210,23): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+__tests__/PersonalInfoSection.test.tsx(27,69): error TS2551: Property 'toBeDisabled' does not exist on type 'Assertion'. Did you mean 'disabled'?
+__tests__/PersonalInfoSection.test.tsx(36,69): error TS2339: Property 'toBeEnabled' does not exist on type 'Assertion'.
+__tests__/PersonalInfoSection.test.tsx(45,69): error TS2339: Property 'toBeEnabled' does not exist on type 'Assertion'.
+__tests__/PersonalInfoSection.test.tsx(48,69): error TS2551: Property 'toBeDisabled' does not exist on type 'Assertion'. Did you mean 'disabled'?
+__tests__/PersonalInfoSection.test.tsx(59,22): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/PersonalInfoSection.test.tsx(59,66): error TS2339: Property 'any' does not exist on type 'ExpectStatic'.
+__tests__/PersonalInfoSection.test.tsx(72,25): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/PersonalInfoSection.test.tsx(72,69): error TS2339: Property 'any' does not exist on type 'ExpectStatic'.
+__tests__/ProfessionalSummarySection.test.tsx(29,69): error TS2551: Property 'toBeDisabled' does not exist on type 'Assertion'. Did you mean 'disabled'?
+__tests__/ProfessionalSummarySection.test.tsx(38,69): error TS2339: Property 'toBeEnabled' does not exist on type 'Assertion'.
+__tests__/ProfessionalSummarySection.test.tsx(47,69): error TS2339: Property 'toBeEnabled' does not exist on type 'Assertion'.
+__tests__/ProfessionalSummarySection.test.tsx(50,69): error TS2551: Property 'toBeDisabled' does not exist on type 'Assertion'. Did you mean 'disabled'?
+__tests__/ProfessionalSummarySection.test.tsx(62,22): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/ProfessionalSummarySection.test.tsx(62,66): error TS2339: Property 'any' does not exist on type 'ExpectStatic'.
+__tests__/ProfessionalSummarySection.test.tsx(75,25): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/ProfessionalSummarySection.test.tsx(75,69): error TS2339: Property 'any' does not exist on type 'ExpectStatic'.
+__tests__/profileCompletion.test.ts(32,51): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileCompletion.test.ts(40,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileCompletion.test.ts(45,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileCompletion.test.ts(51,48): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileCompletion.test.ts(65,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileCompletion.test.ts(79,59): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileCompletion.test.ts(87,27): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileCompletion.test.ts(93,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileCompletion.test.ts(99,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileCompletion.test.ts(104,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileCompletion.test.ts(109,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileCompletion.test.ts(114,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/profileService.test.ts(47,25): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+__tests__/profileService.test.ts(48,26): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/profileService.test.ts(60,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/profileService.test.ts(72,20): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/profileService.test.ts(84,26): error TS2339: Property 'toBeDefined' does not exist on type 'Assertion'.
+__tests__/profileService.test.ts(85,25): error TS2339: Property 'toBeNull' does not exist on type 'Assertion'.
+__tests__/profileService.test.ts(98,24): error TS2339: Property 'toHaveBeenCalledWith' does not exist on type 'Assertion'.
+__tests__/sample.test.ts(5,20): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/sample.test.ts(9,25): error TS2551: Property 'toBeGreaterThan' does not exist on type 'Assertion'. Did you mean 'greaterThan'?
+__tests__/sample.test.ts(17,18): error TS2551: Property 'toHaveProperty' does not exist on type 'Assertion'. Did you mean 'haveOwnProperty'?
+__tests__/sample.test.ts(18,18): error TS2551: Property 'toHaveProperty' does not exist on type 'Assertion'. Did you mean 'haveOwnProperty'?
+__tests__/sample.test.ts(22,26): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/sample.test.ts(23,24): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/sample.test.ts(33,23): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/sample.test.ts(38,26): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/sample.test.ts(39,24): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/sample.test.ts(47,32): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/sample.test.ts(48,36): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/stageIndicators.test.ts(15,41): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/stageIndicators.test.ts(21,43): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/stageIndicators.test.ts(27,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/stageIndicators.test.ts(32,35): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/stageIndicators.test.ts(42,38): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/stageIndicators.test.ts(48,37): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/stageIndicators.test.ts(55,38): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/stageIndicators.test.ts(60,39): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/stageIndicators.test.ts(65,32): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+__tests__/stageIndicators.test.ts(72,46): error TS2339: Property 'toBe' does not exist on type 'Assertion'.

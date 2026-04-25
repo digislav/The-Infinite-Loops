@@ -7,6 +7,8 @@ export interface Document {
   type: 'resume' | 'cover_letter';
   name: string;
   content: string;
+  status?: 'draft' | 'final' | 'archived';
+  tags?: string[];
   created_at?: string;
   updated_at?: string;
 }

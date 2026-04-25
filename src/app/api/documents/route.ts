@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     // Validate required fields.
-    const { job_id, type, name, content } = body;
+    const { job_id, type, name, content, status, tags } = body;
     if (!name || !type || !content || !job_id) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -48,6 +48,8 @@ export async function POST(request: Request) {
       type,
       name,
       content,
+      status: status || 'draft',
+      tags: tags || [],
     });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

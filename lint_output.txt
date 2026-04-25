@@ -1,0 +1,50 @@
+
+> the-infinite-loops@0.1.0 lint
+> eslint
+
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/__tests__/jobWorkflow.test.ts
+  148:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  208:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/__tests__/sample.test.ts
+  45:22  warning  '_stripped' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/cypress.config.ts
+  5:21  warning  'on' is defined but never used      @typescript-eslint/no-unused-vars
+  5:25  warning  'config' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/src/app/api/career-preferences/route.ts
+  45:12  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/src/app/api/experiences/[id]/route.ts
+  37:12  warning  '_err' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/src/app/api/jobs/[id]/interviews/route.ts
+  28:12  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  72:12  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/src/app/api/jobs/[id]/route.ts
+  77:22  warning  '_stripped' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/src/app/api/jobs/route.ts
+  59:22  warning  '_stripped' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/src/app/api/profile/education/[id]/route.ts
+  36:22  warning  '_stripped' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/src/app/api/profile/education/route.ts
+  73:22  warning  '_stripped' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/src/app/api/profile/route.ts
+  73:22  warning  '_stripped' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  73:37  warning  '_id' is assigned a value but never used        @typescript-eslint/no-unused-vars
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/src/app/api/skills/[id]/route.ts
+  21:12  warning  '_err' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/dan/Documents/NJIT/spring2026/CS490/The-Infinite-Loops/src/components/profile/ExperienceSection.tsx
+  173:14  warning  '_err' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 17 problems (2 errors, 15 warnings)
+
