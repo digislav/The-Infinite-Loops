@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getTodayDateInputValue, isDateInputBeforeToday } from '@/lib/utils/dateValidation';
 
 // ---------------------------------------------------------------------------
 // Types & schema
@@ -62,7 +63,12 @@ export const jobFormSchema = z.object({
     'Ghosted',
     'Archived',
   ] as const),
-  deadline: z.string().optional(),
+  deadline: z
+    .string()
+    .optional()
+    .refine((value) => !value || !isDateInputBeforeToday(value), {
+      message: 'Deadline cannot be in the past',
+    }),
   deadlineTime: z.string().optional(),
   priorityFlag: z.boolean(),
 });
@@ -121,6 +127,7 @@ export function JobForm({ job, onSubmit, onCancel, onDelete }: JobFormProps) {
 
   const { formState } = form;
   const isSubmitting = formState.isSubmitting;
+  const todayDate = getTodayDateInputValue();
 
   // Reset to new defaults if the job prop changes (e.g. opening a different job's edit form)
   useEffect(() => {
@@ -246,7 +253,13 @@ export function JobForm({ job, onSubmit, onCancel, onDelete }: JobFormProps) {
               <FormLabel>Application Deadline</FormLabel>
               <FormControl>
                 <div className="flex items-center gap-2">
-                  <Input type="date" disabled={isSubmitting} {...field} className="w-1/2" />
+                  <Input
+                    type="date"
+                    min={todayDate}
+                    disabled={isSubmitting}
+                    {...field}
+                    className="w-1/2"
+                  />
                   <FormField
                     control={form.control}
                     name="deadlineTime"

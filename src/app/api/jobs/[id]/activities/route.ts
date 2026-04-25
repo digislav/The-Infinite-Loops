@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { apiSuccess, apiError } from '@/lib/utils/apiResponse';
 import { getJobById, getActivitiesByJob, addReminder } from '@/lib/services/jobServices';
+import { isDateTimeLocalBeforeNow } from '@/lib/utils/dateValidation';
 
 // GET /api/jobs/:id/activities
 // Protected route — returns all activity timeline events for a job.
@@ -78,6 +79,11 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     const reminderDate = new Date(body.reminder_date);
     if (Number.isNaN(reminderDate.getTime())) {
       return apiError('VALIDATION_ERROR', 400, { reminder_date: 'Invalid reminder date' });
+    }
+    if (isDateTimeLocalBeforeNow(body.reminder_date)) {
+      return apiError('VALIDATION_ERROR', 400, {
+        reminder_date: 'Reminder must be set in the future.',
+      });
     }
 
     const { data, error } = await addReminder(user.id, id, {

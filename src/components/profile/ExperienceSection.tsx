@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Experience } from '@/lib/services/experienceServices';
+import { isEndDateBeforeStartDate } from '@/lib/utils/dateValidation';
 
 export function ExperienceSection() {
   const [experiences, setExperiences] = useState<Experience[]>([]);
@@ -115,6 +116,10 @@ export function ExperienceSection() {
     }
     if (!roleTitle.trim()) {
       setFormError('Role title is required.');
+      return false;
+    }
+    if (!isCurrent && isEndDateBeforeStartDate(startDate, endDate)) {
+      setFormError('End date cannot be before the start date.');
       return false;
     }
     return true;
@@ -268,6 +273,7 @@ export function ExperienceSection() {
               <Input
                 id="exp-end"
                 type="date"
+                min={startDate || undefined}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 disabled={isCurrent}

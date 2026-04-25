@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { formatTimestamp } from '@/lib/utils/dateFormatters';
+import { getMinDateTimeLocalValue, isDateTimeLocalBeforeNow } from '@/lib/utils/dateValidation';
 
 interface ReminderSectionProps {
   jobId: string;
@@ -41,12 +42,6 @@ function sortReminders(reminders: Reminder[]) {
     }
     return new Date(getReminderDate(a)).getTime() - new Date(getReminderDate(b)).getTime();
   });
-}
-
-function getMinDateTimeLocal() {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  return now.toISOString().slice(0, 16);
 }
 
 export function ReminderSection({ jobId, onReminderSaved }: ReminderSectionProps) {
@@ -115,7 +110,7 @@ export function ReminderSection({ jobId, onReminderSaved }: ReminderSectionProps
       return;
     }
     // Hard block — reject past datetimes regardless of what the browser allowed.
-    if (selectedDate.getTime() < Date.now()) {
+    if (isDateTimeLocalBeforeNow(reminderDate)) {
       setFormError('Reminder must be set in the future.');
       return;
     }
@@ -231,12 +226,12 @@ export function ReminderSection({ jobId, onReminderSaved }: ReminderSectionProps
             <Input
               id="reminder-date"
               type="datetime-local"
-              min={getMinDateTimeLocal()}
+              min={getMinDateTimeLocalValue()}
               value={reminderDate}
               onChange={(e) => {
                 const val = e.target.value;
                 setReminderDate(val);
-                if (val && new Date(val).getTime() < Date.now()) {
+                if (val && isDateTimeLocalBeforeNow(val)) {
                   setFormError('Reminder must be set in the future.');
                 } else {
                   setFormError(null);

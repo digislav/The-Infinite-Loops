@@ -2,6 +2,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { apiSuccess, apiError } from '@/lib/utils/apiResponse';
 import { getJobs, createJob } from '@/lib/services/jobServices';
+import { isDateInputBeforeToday } from '@/lib/utils/dateValidation';
+
+function getDateOnly(value?: string) {
+  return value?.slice(0, 10);
+}
 
 export async function GET(req: Request) {
   try {
@@ -52,6 +57,10 @@ export async function POST(req: Request) {
     // Strip user_id from the request body — per S1-003 §5.4.
     // user_id must always come from the session, never from the client.
     const { user_id: _stripped, ...safeBody } = body;
+    const deadlineDate = getDateOnly(safeBody.deadline);
+    if (deadlineDate && isDateInputBeforeToday(deadlineDate)) {
+      return apiError('VALIDATION_ERROR', 400, { deadline: 'Deadline cannot be in the past.' });
+    }
 
     try {
       const newJob = await createJob(user.id, safeBody);

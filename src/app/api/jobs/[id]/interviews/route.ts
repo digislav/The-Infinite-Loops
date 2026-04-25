@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'; // Use NextRequest
 import { createClient } from '@/lib/supabase/server';
 import { getInterviewsByJob, addInterview } from '@/lib/services/jobServices';
+import { isDateTimeLocalBeforeNow } from '@/lib/utils/dateValidation';
 
 //GET all interviews
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -44,6 +45,22 @@ export async function POST(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
+    if (!body.interview_date) {
+      return NextResponse.json({ error: 'Interview date is required' }, { status: 400 });
+    }
+
+    const interviewDate = new Date(body.interview_date);
+    if (Number.isNaN(interviewDate.getTime())) {
+      return NextResponse.json({ error: 'Invalid interview date' }, { status: 400 });
+    }
+
+    if (isDateTimeLocalBeforeNow(body.interview_date)) {
+      return NextResponse.json(
+        { error: 'Interview date and time cannot be in the past.' },
+        { status: 400 },
+      );
+    }
+
     const { data, error } = await addInterview(user.id, id, body);
 
     if (error) {
