@@ -1,17 +1,22 @@
 'use client';
 
-// SavedDocuments — S2-024: Implement Document Save from Job Context.
+// SavedDocuments - S2-024 + S3-005.
 // Displays all saved document drafts for the authenticated user.
 // Shows cover letters and resumes with their linked job context.
-// Users can view, copy, or delete saved documents.
+// Users can view, copy, download, or delete saved documents.
 //
-// Per S1-002 §11.1 — each section manages its own data independently.
-// Per S1-003 — auth and ownership enforced on the backend.
+// Per S1-002 section 11.1 - each section manages its own data independently.
+// Per S1-003 - auth and ownership enforced on the backend.
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatTimestamp } from '@/lib/utils/dateFormatters';
+import {
+  exportDocumentPdf,
+  parseDocumentContent,
+  getDocumentPlainText,
+} from '@/lib/utils/documentExport';
 
 interface SavedDocument {
   id: string;
@@ -22,8 +27,46 @@ interface SavedDocument {
   created_at: string;
 }
 
+interface CoverLetterDocument {
+  name?: string;
+  location?: string;
+  links?: {
+    linkedin?: string | null;
+    github?: string | null;
+    portfolio?: string | null;
+  };
+  date?: string;
+  greeting?: string;
+  body?: string;
+  signoff?: string;
+}
+
+interface ResumeDocument {
+  name?: string;
+  headline?: string;
+  location?: string;
+  links?: {
+    linkedin?: string | null;
+    github?: string | null;
+    portfolio?: string | null;
+  };
+  summary?: string;
+  experiences?: {
+    role: string;
+    company: string;
+    dateRange: string;
+    bullets: string[];
+  }[];
+  education?: {
+    institution: string;
+    degree: string;
+    field: string;
+    dateRange: string;
+  }[];
+  skills?: string[];
+}
+
 interface SavedDocumentsProps {
-  // refreshKey increments when a new document is saved so the list re-fetches.
   refreshKey: number;
   jobId?: string;
   emptyMessage?: string;
@@ -39,14 +82,15 @@ export function SavedDocuments({
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [exportedId, setExportedId] = useState<string | null>(null);
 
-  // Fetch all saved documents on mount and when refreshKey changes.
-  // Auth and ownership enforced server-side per S1-003 §5.4.
   useEffect(() => {
     let cancelled = false;
 
     const loadDocuments = async () => {
       setLoading(true);
+      setError(null);
+
       try {
         const url = jobId ? `/api/documents?jobId=${encodeURIComponent(jobId)}` : '/api/documents';
         const res = await fetch(url);
@@ -54,6 +98,7 @@ export function SavedDocuments({
           if (!cancelled) setError('Could not load saved documents.');
           return;
         }
+
         const json = await res.json();
         if (!cancelled) setDocuments(json.data ?? []);
       } catch {
@@ -69,42 +114,29 @@ export function SavedDocuments({
     };
   }, [jobId, refreshKey]);
 
-  // handleCopy — copies the document content to clipboard.
   async function handleCopy(doc: SavedDocument) {
     try {
-      const parsed = JSON.parse(doc.content);
-      let text = '';
-      if (doc.type === 'cover_letter') {
-        text = `${parsed.name}\n${parsed.location}\n\n${parsed.date}\n\n${parsed.greeting}\n\n${parsed.body}\n\n${parsed.signoff}`;
-      } else {
-        // Resume — format as readable plain text
-        const expText =
-          parsed.experiences
-            ?.map(
-              (exp: { role: string; company: string; dateRange: string; bullets: string[] }) =>
-                `${exp.role} at ${exp.company} (${exp.dateRange})\n${exp.bullets?.map((b: string) => `• ${b}`).join('\n')}`,
-            )
-            .join('\n\n') ?? '';
-        const eduText =
-          parsed.education
-            ?.map(
-              (edu: { institution: string; degree: string; field: string; dateRange: string }) =>
-                `${edu.degree} in ${edu.field} — ${edu.institution} (${edu.dateRange})`,
-            )
-            .join('\n') ?? '';
-        text = `${parsed.name}\n${parsed.headline}\n${parsed.location}\n\nPROFESSIONAL SUMMARY\n${parsed.summary}\n\nEXPERIENCE\n${expText}\n\nEDUCATION\n${eduText}\n\nSKILLS\n${parsed.skills?.join(', ')}`;
-      }
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(getDocumentPlainText(doc));
       setCopiedId(doc.id);
-      setTimeout(() => setCopiedId(null), 2000);
+      window.setTimeout(() => setCopiedId(null), 2000);
     } catch {
       await navigator.clipboard.writeText(doc.content);
       setCopiedId(doc.id);
-      setTimeout(() => setCopiedId(null), 2000);
+      window.setTimeout(() => setCopiedId(null), 2000);
     }
   }
 
-  // handleDelete — deletes a saved document after confirmation.
+  async function handleExportPdf(doc: SavedDocument) {
+    try {
+      setError(null);
+      await exportDocumentPdf(doc);
+      setExportedId(doc.id);
+      window.setTimeout(() => setExportedId(null), 2000);
+    } catch {
+      setError('Could not export this document as PDF.');
+    }
+  }
+
   async function handleDelete(doc: SavedDocument) {
     const confirmed = window.confirm(`Delete "${doc.name}"?`);
     if (!confirmed) return;
@@ -112,14 +144,13 @@ export function SavedDocuments({
     try {
       const res = await fetch(`/api/documents/${doc.id}`, { method: 'DELETE' });
       if (!res.ok) return;
-      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+      setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
       if (expandedId === doc.id) setExpandedId(null);
     } catch {
       // Silently fail.
     }
   }
 
-  // LOADING STATE — skeletons per S1-002 §9.2.
   if (loading) {
     return (
       <div className="flex flex-col gap-3">
@@ -129,12 +160,10 @@ export function SavedDocuments({
     );
   }
 
-  // ERROR STATE — human-friendly per S1-001 §6.3.
   if (error) {
     return <p className="text-sm text-red-500">{error}</p>;
   }
 
-  // EMPTY STATE — per S1-002 §5.7.
   if (documents.length === 0) {
     return <p className="text-sm text-gray-400">{emptyMessage}</p>;
   }
@@ -143,7 +172,6 @@ export function SavedDocuments({
     <div className="flex flex-col gap-3">
       {documents.map((doc) => (
         <div key={doc.id} className="flex flex-col rounded-lg border border-gray-200 bg-white">
-          {/* Document header row */}
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2">
@@ -176,7 +204,15 @@ export function SavedDocuments({
                 onClick={() => handleCopy(doc)}
                 className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
               >
-                {copiedId === doc.id ? '✓ Copied!' : 'Copy'}
+                {copiedId === doc.id ? 'Copied!' : 'Copy'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void handleExportPdf(doc)}
+                className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
+              >
+                {exportedId === doc.id ? 'Exported!' : 'Export PDF'}
               </Button>
               <Button
                 variant="ghost"
@@ -189,141 +225,128 @@ export function SavedDocuments({
             </div>
           </div>
 
-          {/* Expanded content view */}
           {expandedId === doc.id && (
             <div className="border-t border-gray-100 px-4 py-3">
               {(() => {
-                try {
-                  const parsed = JSON.parse(doc.content);
-
-                  if (doc.type === 'cover_letter') {
+                if (doc.type === 'cover_letter') {
+                  const parsed = parseDocumentContent<CoverLetterDocument>(doc.content);
+                  if (!parsed) {
                     return (
-                      <div className="flex flex-col gap-4 p-4 font-serif text-gray-900">
-                        <div>
-                          <h2 className="text-xl font-bold uppercase">{parsed.name}</h2>
-                          <p className="text-sm">{parsed.location}</p>
-                          {parsed.links && (
-                            <div className="mt-1 flex gap-4 text-xs text-[#2E75B6]">
-                              {parsed.links.linkedin && parsed.links.linkedin !== 'None' && (
-                                <span>{parsed.links.linkedin}</span>
-                              )}
-                              {parsed.links.github && parsed.links.github !== 'None' && (
-                                <span>{parsed.links.github}</span>
-                              )}
-                              {parsed.links.portfolio && parsed.links.portfolio !== 'None' && (
-                                <span>{parsed.links.portfolio}</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-sm">{parsed.date}</p>
-                        <p className="text-sm">{parsed.greeting}</p>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{parsed.body}</p>
-                        <p className="text-sm whitespace-pre-wrap">{parsed.signoff}</p>
-                      </div>
+                      <p className="text-sm whitespace-pre-wrap text-gray-600">{doc.content}</p>
                     );
                   }
 
                   return (
-                    <div className="w-full border border-gray-200 bg-white p-8 text-sm text-gray-900">
-                      <div className="mx-auto flex max-w-3xl flex-col gap-6">
-                        <div className="border-b-2 border-gray-900 pb-4 text-center">
-                          <h1 className="font-serif text-2xl font-bold tracking-wide uppercase">
-                            {parsed.name}
-                          </h1>
-                          <p className="mt-1 text-sm font-medium">{parsed.headline}</p>
-                          <p className="mt-0.5 text-xs text-gray-600">{parsed.location}</p>
-                          {parsed.links && (
-                            <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs font-semibold text-[#2E75B6]">
-                              {parsed.links.linkedin && parsed.links.linkedin !== 'None' && (
-                                <span>{parsed.links.linkedin}</span>
-                              )}
-                              {parsed.links.github && parsed.links.github !== 'None' && (
-                                <span>{parsed.links.github}</span>
-                              )}
-                              {parsed.links.portfolio && parsed.links.portfolio !== 'None' && (
-                                <span>{parsed.links.portfolio}</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
-                            Professional Summary
-                          </h2>
-                          <p className="text-sm leading-relaxed">{parsed.summary}</p>
-                        </div>
-                        <div>
-                          <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
-                            Experience
-                          </h2>
-                          <div className="flex flex-col gap-4">
-                            {parsed.experiences?.map(
-                              (
-                                exp: {
-                                  role: string;
-                                  company: string;
-                                  dateRange: string;
-                                  bullets: string[];
-                                },
-                                i: number,
-                              ) => (
-                                <div key={i}>
-                                  <div className="flex items-baseline justify-between">
-                                    <h3 className="text-sm font-bold">{exp.role}</h3>
-                                    <span className="text-xs font-semibold">{exp.dateRange}</span>
-                                  </div>
-                                  <div className="mb-1.5 text-sm italic">{exp.company}</div>
-                                  <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
-                                    {exp.bullets?.map((bull: string, j: number) => (
-                                      <li key={j}>{bull}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              ),
+                    <div className="flex flex-col gap-4 p-4 font-serif text-gray-900">
+                      <div>
+                        <h2 className="text-xl font-bold uppercase">{parsed.name}</h2>
+                        <p className="text-sm">{parsed.location}</p>
+                        {parsed.links && (
+                          <div className="mt-1 flex gap-4 text-xs text-[#2E75B6]">
+                            {parsed.links.linkedin && parsed.links.linkedin !== 'None' && (
+                              <span>{parsed.links.linkedin}</span>
+                            )}
+                            {parsed.links.github && parsed.links.github !== 'None' && (
+                              <span>{parsed.links.github}</span>
+                            )}
+                            {parsed.links.portfolio && parsed.links.portfolio !== 'None' && (
+                              <span>{parsed.links.portfolio}</span>
                             )}
                           </div>
-                        </div>
-                        <div>
-                          <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
-                            Education
-                          </h2>
-                          <div className="flex flex-col gap-3">
-                            {parsed.education?.map(
-                              (
-                                edu: {
-                                  institution: string;
-                                  degree: string;
-                                  field: string;
-                                  dateRange: string;
-                                },
-                                i: number,
-                              ) => (
-                                <div key={i} className="flex items-baseline justify-between">
-                                  <div>
-                                    <div className="text-sm font-bold">{edu.institution}</div>
-                                    <div className="text-sm italic">
-                                      {edu.degree} in {edu.field}
-                                    </div>
-                                  </div>
-                                  <div className="text-xs font-semibold">{edu.dateRange}</div>
-                                </div>
-                              ),
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
-                            Skills
-                          </h2>
-                          <p className="text-sm leading-relaxed">{parsed.skills?.join(', ')}</p>
-                        </div>
+                        )}
                       </div>
+                      <p className="text-sm">{parsed.date}</p>
+                      <p className="text-sm">{parsed.greeting}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{parsed.body}</p>
+                      <p className="text-sm whitespace-pre-wrap">{parsed.signoff}</p>
                     </div>
                   );
-                } catch {
+                }
+
+                const parsed = parseDocumentContent<ResumeDocument>(doc.content);
+                if (!parsed) {
                   return <p className="text-sm whitespace-pre-wrap text-gray-600">{doc.content}</p>;
                 }
+
+                return (
+                  <div className="w-full border border-gray-200 bg-white p-8 text-sm text-gray-900">
+                    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+                      <div className="border-b-2 border-gray-900 pb-4 text-center">
+                        <h1 className="font-serif text-2xl font-bold tracking-wide uppercase">
+                          {parsed.name}
+                        </h1>
+                        <p className="mt-1 text-sm font-medium">{parsed.headline}</p>
+                        <p className="mt-0.5 text-xs text-gray-600">{parsed.location}</p>
+                        {parsed.links && (
+                          <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs font-semibold text-[#2E75B6]">
+                            {parsed.links.linkedin && parsed.links.linkedin !== 'None' && (
+                              <span>{parsed.links.linkedin}</span>
+                            )}
+                            {parsed.links.github && parsed.links.github !== 'None' && (
+                              <span>{parsed.links.github}</span>
+                            )}
+                            {parsed.links.portfolio && parsed.links.portfolio !== 'None' && (
+                              <span>{parsed.links.portfolio}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                          Professional Summary
+                        </h2>
+                        <p className="text-sm leading-relaxed">{parsed.summary}</p>
+                      </div>
+                      <div>
+                        <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                          Experience
+                        </h2>
+                        <div className="flex flex-col gap-4">
+                          {parsed.experiences?.map((experience, index) => (
+                            <div key={index}>
+                              <div className="flex items-baseline justify-between">
+                                <h3 className="text-sm font-bold">{experience.role}</h3>
+                                <span className="text-xs font-semibold">
+                                  {experience.dateRange}
+                                </span>
+                              </div>
+                              <div className="mb-1.5 text-sm italic">{experience.company}</div>
+                              <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+                                {experience.bullets?.map((bullet, bulletIndex) => (
+                                  <li key={bulletIndex}>{bullet}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                          Education
+                        </h2>
+                        <div className="flex flex-col gap-3">
+                          {parsed.education?.map((education, index) => (
+                            <div key={index} className="flex items-baseline justify-between">
+                              <div>
+                                <div className="text-sm font-bold">{education.institution}</div>
+                                <div className="text-sm italic">
+                                  {education.degree} in {education.field}
+                                </div>
+                              </div>
+                              <div className="text-xs font-semibold">{education.dateRange}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
+                          Skills
+                        </h2>
+                        <p className="text-sm leading-relaxed">{parsed.skills?.join(', ')}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
               })()}
             </div>
           )}
