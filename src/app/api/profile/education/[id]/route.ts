@@ -1,6 +1,18 @@
 import { createClient } from '@/lib/supabase/server';
 import { apiSuccess, apiError } from '@/lib/utils/apiResponse';
 import { updateEducation, deleteEducation } from '@/lib/services/educationService';
+import { isEndDateBeforeStartDate } from '@/lib/utils/dateValidation';
+
+function validateEducationDates(body: {
+  start_date?: string;
+  end_date?: string;
+  is_current?: boolean;
+}) {
+  if (!body.is_current && isEndDateBeforeStartDate(body.start_date ?? '', body.end_date ?? '')) {
+    return 'End date cannot be before the start date.';
+  }
+  return null;
+}
 
 // PUT /api/profile/education/:id
 // Updates an existing education record owned by the authenticated user.
@@ -22,6 +34,8 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
 
     // Strip user_id from the request body — per S1-003 §5.4.
     const { user_id: _stripped, ...safeBody } = body;
+    const validationError = validateEducationDates(safeBody);
+    if (validationError) return apiError('VALIDATION_ERROR', 400, { date: validationError });
 
     // updateEducation includes .eq('user_id', userId) —
     // a user can only update their own records per S1-003 §5.2.

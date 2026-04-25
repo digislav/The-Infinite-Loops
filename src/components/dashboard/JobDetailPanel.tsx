@@ -24,6 +24,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Flag, MapPin, Building2, CalendarClock, Pencil, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDeadline, toLocalISOWithOffset, formatTimestamp } from '@/lib/utils/dateFormatters';
+import { getTodayDateInputValue, isDateInputBeforeToday } from '@/lib/utils/dateValidation';
 import type { JobDetail, PipelineStage } from '@/types/job.types';
 
 type DocumentTool = 'cover_letter' | 'resume' | null;
@@ -81,6 +82,7 @@ export function JobDetailPanel({
 }: JobDetailPanelProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const [documentRefreshKey, setDocumentRefreshKey] = useState(0);
   const [activeDocumentTool, setActiveDocumentTool] = useState<DocumentTool>(null);
@@ -97,6 +99,7 @@ export function JobDetailPanel({
   const [recruiterNotes, setRecruiterNotes] = useState('');
   const [customNotes, setCustomNotes] = useState('');
   const [outcomeNotes, setOutcomeNotes] = useState('');
+  const todayDate = getTodayDateInputValue();
 
   useEffect(() => {
     if (job) {
@@ -134,6 +137,7 @@ export function JobDetailPanel({
     if (!isOpen) {
       setIsEditing(false);
       setActiveDocumentTool(null);
+      setEditError(null);
     }
   }, [job, isOpen]);
 
@@ -143,7 +147,13 @@ export function JobDetailPanel({
 
   async function handleSave() {
     if (!job) return;
+    if (deadlineDateStr && isDateInputBeforeToday(deadlineDateStr)) {
+      setEditError('Deadline cannot be in the past.');
+      return;
+    }
+
     setIsSaving(true);
+    setEditError(null);
     try {
       const payload = {
         job_title: title,
@@ -199,7 +209,7 @@ export function JobDetailPanel({
       setIsEditing(false);
     } catch {
       // Human-friendly error — never raw error objects per S1-001 §6.3.
-      alert('Failed to save changes. Please try again.');
+      setEditError('Failed to save changes. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -300,7 +310,10 @@ export function JobDetailPanel({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setIsEditing(false)}
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditError(null);
+                        }}
                         disabled={isSaving}
                         className="h-8 rounded-full px-3 text-xs font-medium text-gray-500 hover:text-gray-700"
                       >
@@ -452,8 +465,12 @@ export function JobDetailPanel({
                     <Input
                       id="deadline-date"
                       type="date"
+                      min={todayDate}
                       value={deadlineDateStr}
-                      onChange={(e) => setDeadlineDateStr(e.target.value)}
+                      onChange={(e) => {
+                        setDeadlineDateStr(e.target.value);
+                        if (editError === 'Deadline cannot be in the past.') setEditError(null);
+                      }}
                       className="w-full sm:w-1/3"
                     />
                     <Input
@@ -472,10 +489,11 @@ export function JobDetailPanel({
                       today.setHours(0, 0, 0, 0);
                       return selected < today;
                     })() && (
-                      <p className="animate-in fade-in slide-in-from-top-1 text-xs font-medium text-amber-600">
-                        ⚠ This deadline is set in the past.
+                      <p className="animate-in fade-in slide-in-from-top-1 text-xs font-medium text-red-600">
+                        Deadline cannot be in the past.
                       </p>
                     )}
+                  {editError && <p className="text-xs font-medium text-red-600">{editError}</p>}
                 </div>
               ) : job.deadline ? (
                 <div

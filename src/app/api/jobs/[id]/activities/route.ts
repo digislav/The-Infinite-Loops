@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { apiSuccess, apiError } from '@/lib/utils/apiResponse';
 import { getJobById, getActivitiesByJob, addReminder } from '@/lib/services/jobServices';
+import { isDateTimeLocalBeforeNow } from '@/lib/utils/dateValidation';
 
 // GET /api/jobs/:id/activities
 // Protected route — returns all activity timeline events for a job.
@@ -54,10 +55,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
   }
 }
 
-export async function POST(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
     const supabase = await createClient();
@@ -68,6 +66,11 @@ export async function POST(
 
     if (authError || !user) return apiError('AUTH_REQUIRED', 401);
 
+    // Verify the caller owns the parent job before proceeding.
+    // Per S1-003 §4.3 — child entity ownership verified through parent.
+    const { data: job, error: jobError } = await getJobById(id, user.id);
+    if (jobError || !job) return apiError('NOT_FOUND', 404);
+
     const body = await req.json();
     if (!body.reminder_date) {
       return apiError('VALIDATION_ERROR', 400, { reminder_date: 'Reminder date is required' });
@@ -76,6 +79,11 @@ export async function POST(
     const reminderDate = new Date(body.reminder_date);
     if (Number.isNaN(reminderDate.getTime())) {
       return apiError('VALIDATION_ERROR', 400, { reminder_date: 'Invalid reminder date' });
+    }
+    if (isDateTimeLocalBeforeNow(body.reminder_date)) {
+      return apiError('VALIDATION_ERROR', 400, {
+        reminder_date: 'Reminder must be set in the future.',
+      });
     }
 
     const { data, error } = await addReminder(user.id, id, {

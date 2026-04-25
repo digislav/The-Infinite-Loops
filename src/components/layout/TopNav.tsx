@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { NavItem } from './NavItem';
+import { ReminderBell } from './ReminderBell';
+import { BrandLogo } from './BrandLogo';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -68,81 +70,7 @@ export function TopNav() {
             href="/dashboard"
             className="decoration-primary flex items-center gap-3 transition-opacity hover:underline"
           >
-            <svg width="124" height="124" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <marker
-                  id="arrowhead"
-                  viewBox="0 0 10 10"
-                  refX="8"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path
-                    d="M2 1L8 5L2 9"
-                    fill="none"
-                    stroke="#2E75B6"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </marker>
-              </defs>
-              <path
-                d="M 340 30 C 430 30, 500 80, 500 110 C 500 150, 440 185, 340 185 C 240 185, 180 150, 180 110 C 180 70, 250 30, 338 30"
-                fill="none"
-                stroke="#2E75B6"
-                strokeWidth="7"
-                strokeLinecap="round"
-                markerEnd="url(#arrowhead)"
-              />
-              <line
-                x1="280"
-                y1="70"
-                x2="330"
-                y2="70"
-                stroke="#1F4E79"
-                strokeWidth="10"
-                strokeLinecap="round"
-              />
-              <line
-                x1="305"
-                y1="70"
-                x2="305"
-                y2="150"
-                stroke="#1F4E79"
-                strokeWidth="10"
-                strokeLinecap="round"
-              />
-              <line
-                x1="350"
-                y1="70"
-                x2="400"
-                y2="70"
-                stroke="#1F4E79"
-                strokeWidth="10"
-                strokeLinecap="round"
-              />
-              <line
-                x1="350"
-                y1="150"
-                x2="400"
-                y2="150"
-                stroke="#1F4E79"
-                strokeWidth="10"
-                strokeLinecap="round"
-              />
-              <line
-                x1="375"
-                y1="70"
-                x2="375"
-                y2="150"
-                stroke="#1F4E79"
-                strokeWidth="10"
-                strokeLinecap="round"
-              />
-            </svg>
+            <BrandLogo className="h-10 w-32" />
             <span className="text-foreground text-xl font-bold">The Infinite Loops</span>
           </Link>
 
@@ -153,8 +81,11 @@ export function TopNav() {
             ))}
           </nav>
 
-          {/* Right side — user menu */}
-          <div className="flex items-center gap-4">
+          {/* Right side — bell + user menu */}
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex">
+              <ReminderBell />
+            </div>
             <div className="relative" ref={dropdownRef}>
               <Button
                 variant="ghost"
