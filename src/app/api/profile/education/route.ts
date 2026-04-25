@@ -1,6 +1,18 @@
 import { createClient } from '@/lib/supabase/server';
 import { apiSuccess, apiError } from '@/lib/utils/apiResponse';
 import { getEducation, createEducation } from '@/lib/services/educationService';
+import { isEndDateBeforeStartDate } from '@/lib/utils/dateValidation';
+
+function validateEducationDates(body: {
+  start_date?: string;
+  end_date?: string;
+  is_current?: boolean;
+}) {
+  if (!body.is_current && isEndDateBeforeStartDate(body.start_date ?? '', body.end_date ?? '')) {
+    return 'End date cannot be before the start date.';
+  }
+  return null;
+}
 
 // GET /api/profile/education
 // Returns all education records for the authenticated user.
@@ -59,6 +71,8 @@ export async function POST(req: Request) {
     // Strip user_id from the request body — per S1-003 §5.4.
     // user_id must always come from the session, never from the client.
     const { user_id: _stripped, ...safeBody } = body;
+    const validationError = validateEducationDates(safeBody);
+    if (validationError) return apiError('VALIDATION_ERROR', 400, { date: validationError });
 
     const { data, error } = await createEducation(user.id, safeBody);
 

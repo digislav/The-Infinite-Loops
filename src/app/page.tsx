@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { BrandLogo } from '@/components/layout/BrandLogo';
 
 export default function Home() {
   return (
@@ -41,13 +42,7 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
+            <BrandLogo variant="mono" className="h-5 w-6" />
             Deploy Now
           </a>
           <a
