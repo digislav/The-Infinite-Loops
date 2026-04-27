@@ -44,6 +44,13 @@ export type JobActivity = {
   created_at?: string;
 };
 
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  Saved: ['Applied', 'Withdrawn'],
+  Applied: ['Interviewing', 'Declined', 'Withdrawn'],
+  Interviewing: ['Offered', 'Declined', 'Withdrawn'],
+  Offered: ['Accepted', 'Declined', 'Withdrawn'],
+};
+
 // 1. GET ALL
 // Ownership enforced via .eq('user_id', userId) per S1-003 §5.2.
 export async function getJobs(
@@ -324,4 +331,33 @@ export async function getActivitiesByJob(jobId: string, userId: string) {
     .eq('jobs.user_id', userId)
     // Most recent activity first
     .order('activity_date', { ascending: false });
+}
+
+export async function updateJobStage(jobId: string, userId: string, newStage: string) {
+  const supabase = await createClient();
+
+  // Fetch current stage to validate the transition
+  const { data: job, error: fetchError } = await supabase
+    .from('jobs')
+    .select('status')
+    .eq('id', jobId)
+    .eq('user_id', userId)
+    .single();
+
+  if (fetchError || !job) throw new Error('Job not found');
+
+  const currentStage = job.status;
+  const allowed = ALLOWED_TRANSITIONS[currentStage] || [];
+
+  if (!allowed.includes(newStage)) {
+    throw new Error(`Invalid transition: ${currentStage} -> ${newStage}`);
+  }
+
+  return await supabase
+    .from('jobs')
+    .update({ status: newStage })
+    .eq('id', jobId)
+    .eq('user_id', userId)
+    .select()
+    .single();
 }
