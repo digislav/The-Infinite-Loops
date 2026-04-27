@@ -145,7 +145,8 @@ describe('updateJob — stage transitions', () => {
     await updateJob('job-123', 'user-abc', { job_title: 'Senior Engineer' });
 
     const stageCalls = mockActivitiesInsert.mock.calls.filter(
-      (call) => call[0]?.activity_type === 'STAGE_CHANGE',
+      (call: unknown[]) =>
+        (call[0] as { activity_type?: string })?.activity_type === 'STAGE_CHANGE',
     );
     expect(stageCalls).toHaveLength(0);
   });
@@ -205,7 +206,7 @@ describe('updateJob — note activity recording', () => {
     await updateJob('job-123', 'user-abc', { job_title: 'Senior Engineer' });
 
     const noteCalls = mockActivitiesInsert.mock.calls.filter(
-      (call) => call[0]?.activity_type === 'NOTE_ADDED',
+      (call: unknown[]) => (call[0] as { activity_type?: string })?.activity_type === 'NOTE_ADDED',
     );
     expect(noteCalls).toHaveLength(0);
   });

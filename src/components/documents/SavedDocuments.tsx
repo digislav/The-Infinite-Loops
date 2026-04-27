@@ -12,6 +12,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Plus, X } from 'lucide-react';
 import { formatTimestamp } from '@/lib/utils/dateFormatters';
 import {
   exportDocumentPdf,
@@ -26,6 +29,8 @@ interface SavedDocument {
   type: 'cover_letter' | 'resume';
   name: string;
   content: string;
+  status: 'draft' | 'final' | 'archived';
+  tags: string[];
   created_at: string;
 }
 
@@ -87,6 +92,10 @@ export function SavedDocuments({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [exportedId, setExportedId] = useState<string | null>(null);
+  const [addingTagId, setAddingTagId] = useState<string | null>(null);
+  const [newTagText, setNewTagText] = useState<string>('');
+
+  const allUniqueTags = Array.from(new Set(documents.flatMap((d) => d.tags || [])));
 
   const filteredAndSorted = useMemo(() => {
     let result = [...documents];
@@ -168,6 +177,72 @@ export function SavedDocuments({
       if (!res.ok) return;
       setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
       if (expandedId === doc.id) setExpandedId(null);
+    } catch {
+      // Silently fail.
+    }
+  }
+
+  async function handleStatusChange(doc: SavedDocument, newStatus: 'draft' | 'final' | 'archived') {
+    try {
+      const res = await fetch(`/api/documents/${doc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) return;
+      setDocuments((prev) =>
+        prev.map((item) => (item.id === doc.id ? { ...item, status: newStatus } : item)),
+      );
+    } catch {
+      // Silently fail.
+    }
+  }
+
+  async function handleAddTag(doc: SavedDocument, explicitTag?: string) {
+    const tagToSave = explicitTag || newTagText.trim();
+    if (!tagToSave) {
+      setAddingTagId(null);
+      return;
+    }
+    const currentTags = doc.tags || [];
+    if (currentTags.includes(tagToSave)) {
+      setAddingTagId(null);
+      setNewTagText('');
+      return;
+    }
+
+    const updatedTags = [...currentTags, tagToSave];
+    try {
+      const res = await fetch(`/api/documents/${doc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags: updatedTags }),
+      });
+      if (!res.ok) return;
+      setDocuments((prev) =>
+        prev.map((item) => (item.id === doc.id ? { ...item, tags: updatedTags } : item)),
+      );
+    } catch {
+      // Silently fail.
+    } finally {
+      setAddingTagId(null);
+      setNewTagText('');
+    }
+  }
+
+  async function handleRemoveTag(doc: SavedDocument, tagToRemove: string) {
+    const currentTags = doc.tags || [];
+    const updatedTags = currentTags.filter((t) => t !== tagToRemove);
+    try {
+      const res = await fetch(`/api/documents/${doc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags: updatedTags }),
+      });
+      if (!res.ok) return;
+      setDocuments((prev) =>
+        prev.map((item) => (item.id === doc.id ? { ...item, tags: updatedTags } : item)),
+      );
     } catch {
       // Silently fail.
     }
