@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createDocument, getDocumentsByJob } from '@/lib/services/documentServices';
+import { createDocumentWithVersion } from '@/lib/services/documentServices';
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -35,26 +36,26 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-
-    // Validate required fields.
     const { job_id, type, name, content, status, tags } = body;
-    if (!name || !type || !content || !job_id) {
+
+    // S3-003: job_id is now optional, but name, type, and content are required
+    if (!name || !type || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Strip user_id from body — always use session identity per S1-003 §5.4.
-    const { data, error } = await createDocument(user.id, {
-      job_id,
+    // UPGRADE: Use the new Versioning Service you wrote
+    // This handles BOTH the 'documents' table and 'document_versions' table
+    const result = await createDocumentWithVersion(user.id, {
+      job_id: job_id || null, // Allow null for general documents
       type,
       name,
       content,
-      status: status || 'draft',
-      tags: tags || [],
+      // Note: tags/status can be added to createDocumentWithVersion if needed
     });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true, data });
-  } catch {
-    return NextResponse.json({ error: 'Invalid Request' }, { status: 400 });
+    return NextResponse.json({ success: true, data: result });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Invalid Request';
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
