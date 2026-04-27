@@ -1,17 +1,24 @@
 'use client';
 
-// SavedDocuments — S2-024: Implement Document Save from Job Context.
+// SavedDocuments - S2-024 + S3-005 + S3-006.
 // Displays all saved document drafts for the authenticated user.
 // Shows cover letters and resumes with their linked job context.
-// Users can view, copy, or delete saved documents.
+// Users can view, copy, download, or delete saved documents.
+// S3-006: filter by type and sort by date/name via LibraryControls.
 //
-// Per S1-002 §11.1 — each section manages its own data independently.
-// Per S1-003 — auth and ownership enforced on the backend.
+// Per S1-002 section 11.1 - each section manages its own data independently.
+// Per S1-003 - auth and ownership enforced on the backend.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatTimestamp } from '@/lib/utils/dateFormatters';
+import {
+  exportDocumentPdf,
+  parseDocumentContent,
+  getDocumentPlainText,
+} from '@/lib/utils/documentExport';
+import { LibraryControls, DocumentTypeFilter, DocumentSortOrder } from './LibraryControls';
 
 interface SavedDocument {
   id: string;
@@ -22,31 +29,98 @@ interface SavedDocument {
   created_at: string;
 }
 
-interface SavedDocumentsProps {
-  // refreshKey increments when a new document is saved so the list re-fetches.
-  refreshKey: number;
+interface CoverLetterDocument {
+  name?: string;
+  location?: string;
+  links?: {
+    linkedin?: string | null;
+    github?: string | null;
+    portfolio?: string | null;
+  };
+  date?: string;
+  greeting?: string;
+  body?: string;
+  signoff?: string;
 }
 
-export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
+interface ResumeDocument {
+  name?: string;
+  headline?: string;
+  location?: string;
+  links?: {
+    linkedin?: string | null;
+    github?: string | null;
+    portfolio?: string | null;
+  };
+  summary?: string;
+  experiences?: {
+    role: string;
+    company: string;
+    dateRange: string;
+    bullets: string[];
+  }[];
+  education?: {
+    institution: string;
+    degree: string;
+    field: string;
+    dateRange: string;
+  }[];
+  skills?: string[];
+}
+
+interface SavedDocumentsProps {
+  refreshKey: number;
+  jobId?: string;
+  emptyMessage?: string;
+}
+
+export function SavedDocuments({
+  refreshKey,
+  jobId,
+  emptyMessage = 'No saved documents yet. Generate a cover letter or resume and save it.',
+}: SavedDocumentsProps) {
   const [documents, setDocuments] = useState<SavedDocument[]>([]);
+  const [typeFilter, setTypeFilter] = useState<DocumentTypeFilter>('all');
+  const [sortOrder, setSortOrder] = useState<DocumentSortOrder>('newest');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [exportedId, setExportedId] = useState<string | null>(null);
 
-  // Fetch all saved documents on mount and when refreshKey changes.
-  // Auth and ownership enforced server-side per S1-003 §5.4.
+  const filteredAndSorted = useMemo(() => {
+    let result = [...documents];
+
+    if (typeFilter !== 'all') {
+      result = result.filter((doc) => doc.type === typeFilter);
+    }
+
+    result.sort((a, b) => {
+      if (sortOrder === 'newest')
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      if (sortOrder === 'oldest')
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      return a.name.localeCompare(b.name);
+    });
+
+    return result;
+  }, [documents, typeFilter, sortOrder]);
+
   useEffect(() => {
     let cancelled = false;
 
     const loadDocuments = async () => {
       setLoading(true);
+      setError(null);
+
       try {
-        const res = await fetch('/api/documents');
+        const url = jobId ? `/api/documents?jobId=${encodeURIComponent(jobId)}` : '/api/documents';
+        const res = await fetch(url);
         if (!res.ok) {
           if (!cancelled) setError('Could not load saved documents.');
           return;
         }
+
         const json = await res.json();
         if (!cancelled) setDocuments(json.data ?? []);
       } catch {
@@ -60,27 +134,31 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
     return () => {
       cancelled = true;
     };
-  }, [refreshKey]);
+  }, [jobId, refreshKey]);
 
-  // handleCopy — copies the document content to clipboard.
   async function handleCopy(doc: SavedDocument) {
     try {
-      const parsed = JSON.parse(doc.content);
-      const text =
-        doc.type === 'cover_letter'
-          ? `${parsed.name}\n${parsed.location}\n\n${parsed.date}\n\n${parsed.greeting}\n\n${parsed.body}\n\n${parsed.signoff}`
-          : JSON.stringify(parsed, null, 2);
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(getDocumentPlainText(doc));
       setCopiedId(doc.id);
-      setTimeout(() => setCopiedId(null), 2000);
+      window.setTimeout(() => setCopiedId(null), 2000);
     } catch {
       await navigator.clipboard.writeText(doc.content);
       setCopiedId(doc.id);
-      setTimeout(() => setCopiedId(null), 2000);
+      window.setTimeout(() => setCopiedId(null), 2000);
     }
   }
 
-  // handleDelete — deletes a saved document after confirmation.
+  async function handleExportPdf(doc: SavedDocument) {
+    try {
+      setError(null);
+      await exportDocumentPdf(doc);
+      setExportedId(doc.id);
+      window.setTimeout(() => setExportedId(null), 2000);
+    } catch {
+      setError('Could not export this document as PDF.');
+    }
+  }
+
   async function handleDelete(doc: SavedDocument) {
     const confirmed = window.confirm(`Delete "${doc.name}"?`);
     if (!confirmed) return;
@@ -88,14 +166,13 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
     try {
       const res = await fetch(`/api/documents/${doc.id}`, { method: 'DELETE' });
       if (!res.ok) return;
-      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+      setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
       if (expandedId === doc.id) setExpandedId(null);
     } catch {
       // Silently fail.
     }
   }
 
-  // LOADING STATE — skeletons per S1-002 §9.2.
   if (loading) {
     return (
       <div className="flex flex-col gap-3">
@@ -105,78 +182,94 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
     );
   }
 
-  // ERROR STATE — human-friendly per S1-001 §6.3.
   if (error) {
     return <p className="text-sm text-red-500">{error}</p>;
   }
 
-  // EMPTY STATE — per S1-002 §5.7.
   if (documents.length === 0) {
-    return (
-      <p className="text-sm text-gray-400">
-        No saved documents yet. Generate a cover letter or resume and save it.
-      </p>
-    );
+    return <p className="text-sm text-gray-400">{emptyMessage}</p>;
   }
 
   return (
     <div className="flex flex-col gap-3">
-      {documents.map((doc) => (
-        <div key={doc.id} className="flex flex-col rounded-lg border border-gray-200 bg-white">
-          {/* Document header row */}
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex flex-col gap-0.5">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    doc.type === 'cover_letter'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-emerald-100 text-emerald-700'
-                  }`}
-                >
-                  {doc.type === 'cover_letter' ? 'Cover Letter' : 'Resume'}
+      <LibraryControls
+        typeFilter={typeFilter}
+        sortOrder={sortOrder}
+        onTypeFilterChange={setTypeFilter}
+        onSortOrderChange={setSortOrder}
+      />
+
+      {filteredAndSorted.length === 0 ? (
+        <p className="text-sm text-gray-400">No documents match the selected filter.</p>
+      ) : (
+        filteredAndSorted.map((doc) => (
+          <div key={doc.id} className="flex flex-col rounded-lg border border-gray-200 bg-white">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      doc.type === 'cover_letter'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-emerald-100 text-emerald-700'
+                    }`}
+                  >
+                    {doc.type === 'cover_letter' ? 'Cover Letter' : 'Resume'}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-800">{doc.name}</span>
+                </div>
+                <span className="text-xs text-gray-400">
+                  Saved {formatTimestamp(doc.created_at)}
                 </span>
-                <span className="text-sm font-semibold text-gray-800">{doc.name}</span>
               </div>
-              <span className="text-xs text-gray-400">Saved {formatTimestamp(doc.created_at)}</span>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setExpandedId(expandedId === doc.id ? null : doc.id)}
+                  className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  {expandedId === doc.id ? 'Hide' : 'View'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleCopy(doc)}
+                  className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  {copiedId === doc.id ? 'Copied!' : 'Copy'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void handleExportPdf(doc)}
+                  className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  {exportedId === doc.id ? 'Exported!' : 'Export PDF'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(doc)}
+                  className="h-7 px-3 text-xs text-gray-400 hover:text-red-500"
+                >
+                  Delete
+                </Button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setExpandedId(expandedId === doc.id ? null : doc.id)}
-                className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
-              >
-                {expandedId === doc.id ? 'Hide' : 'View'}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleCopy(doc)}
-                className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
-              >
-                {copiedId === doc.id ? '✓ Copied!' : 'Copy'}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleDelete(doc)}
-                className="h-7 px-3 text-xs text-gray-400 hover:text-red-500"
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-
-          {/* Expanded content view */}
-          {expandedId === doc.id && (
-            <div className="border-t border-gray-100 px-4 py-3">
-              {(() => {
-                try {
-                  const parsed = JSON.parse(doc.content);
-
+            {expandedId === doc.id && (
+              <div className="border-t border-gray-100 px-4 py-3">
+                {(() => {
                   if (doc.type === 'cover_letter') {
+                    const parsed = parseDocumentContent<CoverLetterDocument>(doc.content);
+                    if (!parsed) {
+                      return (
+                        <p className="text-sm whitespace-pre-wrap text-gray-600">{doc.content}</p>
+                      );
+                    }
+
                     return (
                       <div className="flex flex-col gap-4 p-4 font-serif text-gray-900">
                         <div>
@@ -204,7 +297,13 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
                     );
                   }
 
-                  // Resume — render full Classic template canvas
+                  const parsed = parseDocumentContent<ResumeDocument>(doc.content);
+                  if (!parsed) {
+                    return (
+                      <p className="text-sm whitespace-pre-wrap text-gray-600">{doc.content}</p>
+                    );
+                  }
+
                   return (
                     <div className="w-full border border-gray-200 bg-white p-8 text-sm text-gray-900">
                       <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -228,75 +327,53 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
                             </div>
                           )}
                         </div>
-
                         <div>
                           <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
                             Professional Summary
                           </h2>
                           <p className="text-sm leading-relaxed">{parsed.summary}</p>
                         </div>
-
                         <div>
                           <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
                             Experience
                           </h2>
                           <div className="flex flex-col gap-4">
-                            {parsed.experiences?.map(
-                              (
-                                exp: {
-                                  role: string;
-                                  company: string;
-                                  dateRange: string;
-                                  bullets: string[];
-                                },
-                                i: number,
-                              ) => (
-                                <div key={i}>
-                                  <div className="flex items-baseline justify-between">
-                                    <h3 className="text-sm font-bold">{exp.role}</h3>
-                                    <span className="text-xs font-semibold">{exp.dateRange}</span>
-                                  </div>
-                                  <div className="mb-1.5 text-sm italic">{exp.company}</div>
-                                  <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
-                                    {exp.bullets?.map((bull: string, j: number) => (
-                                      <li key={j}>{bull}</li>
-                                    ))}
-                                  </ul>
+                            {parsed.experiences?.map((experience, index) => (
+                              <div key={index}>
+                                <div className="flex items-baseline justify-between">
+                                  <h3 className="text-sm font-bold">{experience.role}</h3>
+                                  <span className="text-xs font-semibold">
+                                    {experience.dateRange}
+                                  </span>
                                 </div>
-                              ),
-                            )}
+                                <div className="mb-1.5 text-sm italic">{experience.company}</div>
+                                <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+                                  {experience.bullets?.map((bullet, bulletIndex) => (
+                                    <li key={bulletIndex}>{bullet}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
                           </div>
                         </div>
-
                         <div>
                           <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
                             Education
                           </h2>
                           <div className="flex flex-col gap-3">
-                            {parsed.education?.map(
-                              (
-                                edu: {
-                                  institution: string;
-                                  degree: string;
-                                  field: string;
-                                  dateRange: string;
-                                },
-                                i: number,
-                              ) => (
-                                <div key={i} className="flex items-baseline justify-between">
-                                  <div>
-                                    <div className="text-sm font-bold">{edu.institution}</div>
-                                    <div className="text-sm italic">
-                                      {edu.degree} in {edu.field}
-                                    </div>
+                            {parsed.education?.map((education, index) => (
+                              <div key={index} className="flex items-baseline justify-between">
+                                <div>
+                                  <div className="text-sm font-bold">{education.institution}</div>
+                                  <div className="text-sm italic">
+                                    {education.degree} in {education.field}
                                   </div>
-                                  <div className="text-xs font-semibold">{edu.dateRange}</div>
                                 </div>
-                              ),
-                            )}
+                                <div className="text-xs font-semibold">{education.dateRange}</div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-
                         <div>
                           <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
                             Skills
@@ -306,14 +383,12 @@ export function SavedDocuments({ refreshKey }: SavedDocumentsProps) {
                       </div>
                     </div>
                   );
-                } catch {
-                  return <p className="text-sm whitespace-pre-wrap text-gray-600">{doc.content}</p>;
-                }
-              })()}
-            </div>
-          )}
-        </div>
-      ))}
+                })()}
+              </div>
+            )}
+          </div>
+        ))
+      )}
     </div>
   );
 }

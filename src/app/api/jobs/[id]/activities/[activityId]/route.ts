@@ -25,10 +25,19 @@ export async function PATCH(
       return apiError('VALIDATION_ERROR', 400);
     }
 
-    const { data, error } = await updateReminderCompletion(user.id, id, activityId, body.is_completed);
+    const { data, error } = await updateReminderCompletion(
+      user.id,
+      id,
+      activityId,
+      body.is_completed,
+    );
     if (error) {
-      console.error('PATCH /api/jobs/[id]/activities/[activityId] failed', { jobId: id, activityId, error });
-      return apiError('INTERNAL_ERROR', 500);
+      console.error('PATCH /api/jobs/[id]/activities/[activityId] failed', {
+        jobId: id,
+        activityId,
+        error,
+      });
+      return apiError('INTERNAL_ERROR', 500, { error });
     }
 
     return apiSuccess(data);

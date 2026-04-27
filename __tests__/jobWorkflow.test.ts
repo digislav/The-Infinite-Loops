@@ -69,6 +69,7 @@ describe('updateJob — stage transitions', () => {
 
   // HAPPY PATH — a STAGE_CHANGE activity is recorded after a successful stage update.
   // Per S2-009 — stage transitions must be recorded with timestamps.
+  //show as happy path for b1.5 and b2.1
   it('records a STAGE_CHANGE activity when the stage is updated', async () => {
     mockJobsSingle.mockResolvedValue({ data: mockUpdatedJob, error: null });
 
@@ -104,6 +105,7 @@ describe('updateJob — stage transitions', () => {
   // Per S1-003 §5.2 — we never write child records for jobs the user doesn't own.
   // If .eq('user_id', userId) finds no matching row, result.data is null
   // and the activity insert is skipped entirely.
+  //non happy path for b1.5 and b2.4
   it('does not record a STAGE_CHANGE activity when the user does not own the job', async () => {
     mockJobsSingle.mockResolvedValue({ data: null, error: null });
 
@@ -196,6 +198,7 @@ describe('updateJob — note activity recording', () => {
   });
 
   // EDGE CASE — updating a non-note field does not record a NOTE_ADDED activity.
+  //edge case for b1.5
   it('does not record a NOTE_ADDED activity when no note fields are updated', async () => {
     mockJobsSingle.mockResolvedValue({ data: mockUpdatedJob, error: null });
 

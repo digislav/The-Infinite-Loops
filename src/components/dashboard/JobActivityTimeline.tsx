@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { formatDateOnly, formatTimestamp } from '@/lib/utils/dateFormatters';
+import { formatDeadline, formatTimestamp } from '@/lib/utils/dateFormatters';
 import type { PipelineStage } from '@/types/job.types';
 
 interface JobActivity {
@@ -58,7 +58,7 @@ function ActivityIcon({
   return (
     <div
       className={cn(
-        'mt-1 h-2.5 w-2.5 shrink-0 rounded-full',
+        'relative z-10 mt-1 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-white',
         type === 'STAGE_CHANGE' && 'bg-blue-400',
         type === 'INTERVIEW_SCHEDULED' && 'bg-amber-400',
         type === 'NOTE_ADDED' && 'bg-gray-400',
@@ -141,7 +141,7 @@ function ActivityItem({
         )}
 
         {activity.activity_type === 'REMINDER_SET' && activity.interview_date && (
-          <p className="text-xs text-gray-500">Due: {formatDateOnly(activity.interview_date)}</p>
+          <p className="text-xs text-gray-500">Due: {formatDeadline(activity.interview_date)}</p>
         )}
 
         {activity.activity_type === 'REMINDER_SET' && (
@@ -242,7 +242,7 @@ export function JobActivityTimeline({ jobId, refreshKey }: JobActivityTimelinePr
     <div className="flex flex-col gap-3">
       <p className="text-sm font-semibold text-gray-700">Activity Timeline</p>
       <div className="relative flex flex-col gap-4 pl-1">
-        <div className="absolute top-2 left-[4px] h-full w-px bg-gray-100" aria-hidden={true} />
+        <div className="absolute top-2 left-[8.5px] h-full w-px bg-gray-200" aria-hidden={true} />
         {activities.map((activity) => (
           <ActivityItem
             key={activity.id}
@@ -260,8 +260,12 @@ export function JobActivityTimeline({ jobId, refreshKey }: JobActivityTimelinePr
                 }
 
                 const json = await res.json();
-                if (!json?.success) {
-                  throw new Error('Failed to update reminder.');
+                if (!res.ok || !json?.success) {
+                  throw new Error(
+                    json?.error?.details?.message ||
+                      json?.error?.message ||
+                      'Failed to update reminder on backend',
+                  );
                 }
 
                 setActivities((current) =>
@@ -269,8 +273,8 @@ export function JobActivityTimeline({ jobId, refreshKey }: JobActivityTimelinePr
                     item.id === activityToUpdate.id ? { ...item, is_completed: completed } : item,
                   ),
                 );
-              } catch {
-                alert('Unable to update reminder status. Please try again.');
+              } catch (err) {
+                alert(`Unable to update reminder status: ${(err as Error).message}`);
               }
             }}
           />

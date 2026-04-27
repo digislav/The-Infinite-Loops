@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatDateOnly } from '@/lib/utils/dateFormatters';
+import { getMinDateTimeLocalValue, isDateTimeLocalBeforeNow } from '@/lib/utils/dateValidation';
 
 // Shape of a single interview record from the API.
 // Matches the job_activities table columns for INTERVIEW_SCHEDULED events.
@@ -65,6 +66,7 @@ export function InterviewSection({ jobId }: InterviewSectionProps) {
   const [notes, setNotes] = useState('');
   // Inline validation error for required fields per S1-002 §5.3.
   const [formError, setFormError] = useState<string | null>(null);
+  const minDateTime = getMinDateTimeLocalValue();
 
   // Fetch all interviews for this job on mount and when jobId changes.
   useEffect(() => {
@@ -128,6 +130,10 @@ export function InterviewSection({ jobId }: InterviewSectionProps) {
     }
     if (!interviewDate) {
       setFormError('Please enter the interview date and time.');
+      return;
+    }
+    if (isDateTimeLocalBeforeNow(interviewDate)) {
+      setFormError('Interview date and time cannot be in the past.');
       return;
     }
 
@@ -237,10 +243,24 @@ export function InterviewSection({ jobId }: InterviewSectionProps) {
             <Input
               id="interview-date"
               type="datetime-local"
+              min={minDateTime}
               value={interviewDate}
-              onChange={(e) => setInterviewDate(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setInterviewDate(value);
+                if (value && isDateTimeLocalBeforeNow(value)) {
+                  setFormError('Interview date and time cannot be in the past.');
+                } else if (formError === 'Interview date and time cannot be in the past.') {
+                  setFormError(null);
+                }
+              }}
               className="h-8 text-xs"
             />
+            {formError === 'Interview date and time cannot be in the past.' && (
+              <p className="animate-in fade-in slide-in-from-top-1 text-[11px] font-medium text-red-600">
+                {formError}
+              </p>
+            )}
           </div>
 
           {/* Location / Zoom URL — optional field */}
@@ -273,7 +293,9 @@ export function InterviewSection({ jobId }: InterviewSectionProps) {
           </div>
 
           {/* Inline validation error — per S1-002 §5.3 shown adjacent to form */}
-          {formError && <p className="text-xs text-red-600">{formError}</p>}
+          {formError && formError !== 'Interview date and time cannot be in the past.' && (
+            <p className="text-xs text-red-600">{formError}</p>
+          )}
 
           {/* Form action buttons — per S1-002 §5.2 primary action bottom right */}
           <div className="flex justify-end gap-2">

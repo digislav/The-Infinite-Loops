@@ -12,22 +12,11 @@ describe('SCRUM-25 - JobForm', () => {
 
     const { container } = render(<JobForm onSubmit={onSubmit} onCancel={onCancel} />);
 
-    await user.type(
-      screen.getByPlaceholderText(/software engineer/i),
-      'Frontend Engineer'
-    );
-    await user.type(
-      screen.getByPlaceholderText(/acme corp/i),
-      'Acme'
-    );
-    await user.type(
-      screen.getByPlaceholderText(/new york, ny/i),
-      'Remote'
-    );
+    await user.type(screen.getByPlaceholderText(/software engineer/i), 'Frontend Engineer');
+    await user.type(screen.getByPlaceholderText(/acme corp/i), 'Acme');
+    await user.type(screen.getByPlaceholderText(/new york, ny/i), 'Remote');
 
-    const submitButton = container.querySelector(
-      'button[type="submit"]'
-    ) as HTMLButtonElement;
+    const submitButton = container.querySelector('button[type="submit"]') as HTMLButtonElement;
 
     expect(submitButton).toBeTruthy();
 
@@ -43,6 +32,7 @@ describe('SCRUM-25 - JobForm', () => {
       location: 'Remote',
       pipelineStage: 'Interested',
       deadline: '',
+      deadlineTime: '08:00',
       priorityFlag: false,
     });
   });
@@ -54,9 +44,7 @@ describe('SCRUM-25 - JobForm', () => {
 
     const { container } = render(<JobForm onSubmit={onSubmit} onCancel={onCancel} />);
 
-    const submitButton = container.querySelector(
-      'button[type="submit"]'
-    ) as HTMLButtonElement;
+    const submitButton = container.querySelector('button[type="submit"]') as HTMLButtonElement;
 
     await user.click(submitButton);
 
@@ -74,7 +62,7 @@ describe('SCRUM-25 - JobForm', () => {
       () =>
         new Promise<void>((resolve) => {
           resolveSubmit = resolve;
-        })
+        }),
     );
 
     const { container } = render(<JobForm onSubmit={onSubmit} onCancel={onCancel} />);
@@ -83,9 +71,7 @@ describe('SCRUM-25 - JobForm', () => {
     const companyInput = screen.getByPlaceholderText(/acme corp/i);
     const locationInput = screen.getByPlaceholderText(/new york, ny/i);
     const cancelButton = screen.getByRole('button', { name: /cancel/i });
-    const submitButton = container.querySelector(
-      'button[type="submit"]'
-    ) as HTMLButtonElement;
+    const submitButton = container.querySelector('button[type="submit"]') as HTMLButtonElement;
 
     await user.type(titleInput, 'Frontend Engineer');
     await user.type(companyInput, 'Acme');
@@ -116,16 +102,12 @@ describe('SCRUM-25 - JobFormModal', () => {
 
     await user.click(screen.getByRole('button', { name: /add job/i }));
 
-    expect(
-      screen.getByPlaceholderText(/software engineer/i)
-    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/software engineer/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /cancel/i }));
 
     await waitFor(() => {
-      expect(
-        screen.queryByPlaceholderText(/software engineer/i)
-      ).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(/software engineer/i)).not.toBeInTheDocument();
     });
   });
 });

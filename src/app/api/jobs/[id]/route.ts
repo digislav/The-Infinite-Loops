@@ -3,6 +3,11 @@ import { createClient } from '@/lib/supabase/server';
 import { apiSuccess, apiError } from '@/lib/utils/apiResponse';
 import { getJobById, updateJob, deleteJob } from '@/lib/services/jobServices';
 import { revalidatePath } from 'next/cache';
+import { isDateInputBeforeToday } from '@/lib/utils/dateValidation';
+
+function getDateOnly(value?: string) {
+  return value?.slice(0, 10);
+}
 
 // GET /api/jobs/:id
 // Protected route — returns the full detail record for a single job.
@@ -50,7 +55,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 // Protected route — updates a job record owned by the authenticated user.
 // Per S1-003 §5.4 — user_id is stripped from the request body and
 // ownership is enforced in the updateJob service query.
-
+//show for b1.4
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
@@ -70,17 +75,21 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     // user_id must always come from the session, never from what the
     // client sends. This prevents a user from overwriting another user's job.
     const { user_id: _stripped, ...safeBody } = body;
+    const deadlineDate = getDateOnly(safeBody.deadline);
+    if (deadlineDate && isDateInputBeforeToday(deadlineDate)) {
+      return apiError('VALIDATION_ERROR', 400, { deadline: 'Deadline cannot be in the past.' });
+    }
 
     // updateJob includes .eq('user_id', user.id) in its query —
     // so even if the job ID exists, only the owner can update it.
     const { data, error } = await updateJob(id, user.id, safeBody);
 
     if (error) return apiError('INTERNAL_ERROR', 500);
-    
+
     // for cache issues
     revalidatePath('/dashboard');
     revalidatePath('/');
-    
+
     return apiSuccess(data);
   } catch {
     return apiError('INTERNAL_ERROR', 500);

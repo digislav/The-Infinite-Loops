@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Education } from '@/lib/services/educationService';
+import { isEndDateBeforeStartDate } from '@/lib/utils/dateValidation';
 
 export function EducationSection() {
   const [education, setEducation] = useState<Education[]>([]);
@@ -136,6 +137,10 @@ export function EducationSection() {
     }
     if (!fieldOfStudy.trim()) {
       setFormError('Field of study is required.');
+      return false;
+    }
+    if (!isCurrent && isEndDateBeforeStartDate(startDate, endDate)) {
+      setFormError('End date cannot be before the start date.');
       return false;
     }
     return true;
@@ -332,6 +337,7 @@ export function EducationSection() {
               <Input
                 id="edu-end"
                 type="date"
+                min={startDate || undefined}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 disabled={isCurrent}

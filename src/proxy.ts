@@ -1,4 +1,4 @@
-//route protection
+// Route protection.
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -10,7 +10,7 @@ const publicRoutes = [
   '/api/auth/callback',
 ];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -32,22 +32,22 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // Refresh the auth session so it doesn't expire
+  // Refresh the auth session so it doesn't expire.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
 
-  // If the user is NOT logged in and tries to access a protected route, redirect to /login
+  // If the user is NOT logged in and tries to access a protected route, redirect to /login.
   if (!user && !publicRoutes.some((route) => pathname.startsWith(route)) && pathname !== '/') {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
-  // If the user IS logged in and tries to access login/register/etc., redirect to /dashboard
-  // EXCEPT for /reset-password where they need to be "logged in" to change it
+  // If the user IS logged in and tries to access login/register/etc., redirect to /dashboard.
+  // EXCEPT for /reset-password where they need to be "logged in" to change it.
   if (
     user &&
     publicRoutes.some((route) => pathname.startsWith(route)) &&

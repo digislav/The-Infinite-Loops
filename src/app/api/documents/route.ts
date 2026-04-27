@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createDocument } from '@/lib/services/documentServices';
+import { createDocument, getDocumentsByJob } from '@/lib/services/documentServices';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -10,15 +10,18 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { data, error } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    const jobId = request.nextUrl.searchParams.get('jobId');
+    const { data, error } = jobId
+      ? await getDocumentsByJob(user.id, jobId)
+      : await supabase
+          .from('documents')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true, data });
-  } catch (_err) {
+  } catch {
     return NextResponse.json({ error: 'Invalid Request' }, { status: 400 });
   }
 }
@@ -49,7 +52,7 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true, data });
-  } catch (_err) {
+  } catch {
     return NextResponse.json({ error: 'Invalid Request' }, { status: 400 });
   }
 }
