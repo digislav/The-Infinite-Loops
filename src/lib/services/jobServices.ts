@@ -45,10 +45,13 @@ export type JobActivity = {
 };
 
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  Saved: ['Applied', 'Withdrawn'],
-  Applied: ['Interviewing', 'Declined', 'Withdrawn'],
-  Interviewing: ['Offered', 'Declined', 'Withdrawn'],
-  Offered: ['Accepted', 'Declined', 'Withdrawn'],
+  Interested: ['Applied', 'Archived'],
+  Applied: ['Interview', 'Rejected', 'Ghosted', 'Archived'],
+  Interview: ['Offer', 'Rejected', 'Ghosted', 'Archived'],
+  Offer: ['Rejected', 'Archived'],
+  Rejected: ['Archived'],
+  Ghosted: ['Interview', 'Rejected', 'Archived'],
+  Archived: [],
 };
 
 // 1. GET ALL
@@ -339,14 +342,14 @@ export async function updateJobStage(jobId: string, userId: string, newStage: st
   // Fetch current stage to validate the transition
   const { data: job, error: fetchError } = await supabase
     .from('jobs')
-    .select('status')
+    .select('current_stage')
     .eq('id', jobId)
     .eq('user_id', userId)
     .single();
 
   if (fetchError || !job) throw new Error('Job not found');
 
-  const currentStage = job.status;
+  const currentStage = job.current_stage;
   const allowed = ALLOWED_TRANSITIONS[currentStage] || [];
 
   if (!allowed.includes(newStage)) {
@@ -355,7 +358,7 @@ export async function updateJobStage(jobId: string, userId: string, newStage: st
 
   return await supabase
     .from('jobs')
-    .update({ status: newStage })
+    .update({ current_stage: newStage })
     .eq('id', jobId)
     .eq('user_id', userId)
     .select()
