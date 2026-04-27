@@ -60,6 +60,18 @@ const STAGES: PipelineStage[] = [
   'Archived',
 ];
 
+// Valid stage transitions — mirrors backend enforcement.
+// Only stages listed here are selectable from each current stage.
+const ALLOWED_TRANSITIONS: Record<PipelineStage, PipelineStage[]> = {
+  Interested: ['Applied', 'Archived'],
+  Applied: ['Interview', 'Rejected', 'Ghosted', 'Archived'],
+  Interview: ['Offer', 'Rejected', 'Ghosted', 'Archived'],
+  Offer: ['Rejected', 'Archived'],
+  Rejected: ['Archived'],
+  Ghosted: ['Interview', 'Rejected', 'Archived'],
+  Archived: [],
+};
+
 export function isDeadlineSoon(deadline?: string): boolean {
   if (!deadline) return false;
   const diff = new Date(deadline).getTime() - Date.now();
@@ -495,7 +507,12 @@ export function BoardContent({
                         </SelectTrigger>
                         <SelectContent>
                           {STAGES.map((s) => (
-                            <SelectItem key={s} value={s} className="text-sm">
+                            <SelectItem
+                              key={s}
+                              value={s}
+                              className="text-sm"
+                              disabled={!ALLOWED_TRANSITIONS[job.pipelineStage].includes(s)}
+                            >
                               {s}
                             </SelectItem>
                           ))}
