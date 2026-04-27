@@ -9,6 +9,26 @@ export interface DocumentVersion {
 }
 
 /**
+ * S3-008: Toggles the archived state of a document
+ */
+export async function toggleDocumentArchive(docId: string, userId: string, archive: boolean) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('documents')
+    .update({
+      is_archived: archive,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', docId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  return { data, error };
+}
+
+/**
  * S3-003: Creates a document AND its initial version (v1)
  */
 export async function createDocumentWithVersion(
