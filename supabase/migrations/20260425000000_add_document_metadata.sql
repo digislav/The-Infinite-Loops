@@ -3,9 +3,9 @@
 -- tags defaults to empty array
 
 ALTER TABLE public.documents 
-ADD COLUMN status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'final', 'archived')),
-ADD COLUMN tags TEXT[] DEFAULT '{}';
+ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'final', 'archived')),
+ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
 
--- Create an index on the new columns for faster filtering later
-CREATE INDEX idx_documents_status ON public.documents(status);
-CREATE INDEX idx_documents_tags ON public.documents USING GIN (tags);
+-- Create indexes if they don't already exist
+CREATE INDEX IF NOT EXISTS idx_documents_status ON public.documents(status);
+CREATE INDEX IF NOT EXISTS idx_documents_tags ON public.documents USING GIN (tags);

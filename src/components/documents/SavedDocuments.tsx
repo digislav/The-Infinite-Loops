@@ -291,6 +291,31 @@ export function SavedDocuments({
                   >
                     {doc.type === 'cover_letter' ? 'Cover Letter' : 'Resume'}
                   </span>
+                  {/* S3-002: Status badge — click to cycle through draft/final/archived */}
+                  <button
+                    onClick={() =>
+                      handleStatusChange(
+                        doc,
+                        doc.status === 'draft'
+                          ? 'final'
+                          : doc.status === 'final'
+                            ? 'archived'
+                            : 'draft',
+                      )
+                    }
+                    className={`cursor-pointer rounded-full px-2 py-0.5 text-xs font-medium transition-colors hover:opacity-80 ${
+                      doc.status === 'final'
+                        ? 'bg-purple-100 text-purple-700'
+                        : doc.status === 'archived'
+                          ? 'bg-gray-100 text-gray-700'
+                          : 'bg-amber-100 text-amber-700'
+                    }`}
+                    title="Click to cycle status"
+                  >
+                    {doc.status
+                      ? doc.status.charAt(0).toUpperCase() + doc.status.slice(1)
+                      : 'Draft'}
+                  </button>
                   <span className="text-sm font-semibold text-gray-800">{doc.name}</span>
                 </div>
                 <span className="text-xs text-gray-400">
