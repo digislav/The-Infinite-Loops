@@ -6,6 +6,7 @@ import { ReminderSection } from './ReminderSection';
 import { CoverLetterGenerator } from '@/components/documents/CoverLetterGenerator';
 import { ResumeGenerator } from '@/components/documents/ResumeGenerator';
 import { SavedDocuments } from '@/components/documents/SavedDocuments';
+import { JobDocumentLinker } from '@/components/documents/JobDocumentLinker';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -30,8 +31,6 @@ import type { JobDetail, PipelineStage } from '@/types/job.types';
 type DocumentTool = 'cover_letter' | 'resume' | null;
 
 // Pipeline stage colour tokens — per S1-002 §4.5.
-// Must stay consistent with stageStyles in BoardContent.tsx and
-// JobActivityTimeline.tsx so stage badges look identical everywhere.
 const stageStyles: Record<PipelineStage, string> = {
   Interested: 'bg-indigo-100 text-indigo-700',
   Applied: 'bg-blue-100 text-blue-700',
@@ -116,7 +115,6 @@ export function JobDetailPanel({
         setDeadlineDateStr(`${year}-${month}-${day}`);
         const hours = d.getHours();
         const minutes = d.getMinutes();
-        // Default to 08:00 if no explicit time is stored (midnight = date-only entry).
         if (hours !== 0 || minutes !== 0) {
           setDeadlineTimeStr(
             `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
@@ -159,13 +157,8 @@ export function JobDetailPanel({
         job_title: title,
         company_name: company,
         location: location || undefined,
-        // Only include current_stage if it actually changed.
-        // This prevents jobServices from recording a false STAGE_CHANGE
-        // activity when the user only updated notes or other fields.
         ...(pipelineStage !== job.pipelineStage && { current_stage: pipelineStage }),
         is_priority: priorityFlag,
-        // Combine date + optional time into a single datetime string.
-        // If only a date is provided, toLocalISOWithOffset defaults the time to 8 AM.
         deadline: deadlineDateStr
           ? toLocalISOWithOffset(
               deadlineTimeStr ? `${deadlineDateStr}T${deadlineTimeStr}` : deadlineDateStr,
@@ -178,8 +171,6 @@ export function JobDetailPanel({
         outcome_notes: outcomeNotes || undefined,
       };
 
-      // user_id is never included in the payload — the backend uses
-      // the session identity per S1-003 §5.4.
       const res = await fetch(`/api/jobs/${job.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -208,7 +199,6 @@ export function JobDetailPanel({
 
       setIsEditing(false);
     } catch {
-      // Human-friendly error — never raw error objects per S1-001 §6.3.
       setEditError('Failed to save changes. Please try again.');
     } finally {
       setIsSaving(false);
@@ -236,7 +226,6 @@ export function JobDetailPanel({
         )}
         aria-label="Job detail"
       >
-        {/* LOADING STATE — skeletons while data fetches per S1-002 §9.2 */}
         {isLoading && (
           <div className="flex flex-col gap-4 pt-2">
             <Skeleton className="h-7 w-3/4" />
@@ -251,7 +240,6 @@ export function JobDetailPanel({
           </div>
         )}
 
-        {/* ERROR STATE — human-friendly message per S1-001 §6.3 */}
         {!isLoading && error && (
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
             <p className="text-base font-semibold text-red-600">{error}</p>
@@ -259,10 +247,8 @@ export function JobDetailPanel({
           </div>
         )}
 
-        {/* MAIN CONTENT — only shown when data has loaded successfully */}
         {!isLoading && !error && job && (
           <>
-            {/* HEADER — title, priority flag, stage badge, edit button */}
             <DialogHeader className="-mt-1.5 mb-4">
               <div className="flex items-center justify-between">
                 <div className="mr-4 flex flex-1 items-center gap-2">
@@ -347,7 +333,6 @@ export function JobDetailPanel({
                 </div>
               </div>
 
-              {/* Stage badge or stage selector when editing */}
               {isEditing ? (
                 <Select
                   value={pipelineStage}
@@ -365,7 +350,6 @@ export function JobDetailPanel({
                   </SelectContent>
                 </Select>
               ) : (
-                // Stage badge — colour-coded per S1-002 §4.5 and §5.5
                 <Badge
                   className={cn(
                     'mt-1 w-fit rounded-full border-0 px-2 py-0.5 text-xs font-medium',
@@ -375,7 +359,6 @@ export function JobDetailPanel({
                   {job.pipelineStage}
                 </Badge>
               )}
-              {/* Dynamically reveal Outcome Notes if stage is marked as complete */}
               {isEditing && ['Rejected', 'Ghosted', 'Offer'].includes(pipelineStage) && (
                 <div className="animate-in fade-in slide-in-from-top-2 mt-3 rounded-md border border-gray-100 bg-gray-50 p-3">
                   <Label htmlFor="outcomeNotes" className="text-sm font-semibold text-gray-700">
@@ -396,7 +379,6 @@ export function JobDetailPanel({
               )}
             </DialogHeader>
 
-            {/* CORE INFO — company, location, last activity, deadline */}
             <div className="flex flex-col gap-3 border-b border-gray-100 pb-5">
               {isEditing ? (
                 <div className="flex items-center gap-2">
@@ -434,7 +416,6 @@ export function JobDetailPanel({
                 )
               )}
 
-              {/* OUTCOME NOTES BLOCK - Read Only rendering */}
               {!isEditing && job.outcomeNotes && (
                 <div className="relative mb-2 rounded-lg border border-slate-100 bg-slate-50 p-4">
                   <div className="mb-2 flex items-center gap-2">
@@ -447,7 +428,6 @@ export function JobDetailPanel({
                 </div>
               )}
 
-              {/* Last activity date — always shown in read mode */}
               {job.lastActivityDate && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <CalendarClock size={15} aria-hidden={true} />
@@ -455,7 +435,6 @@ export function JobDetailPanel({
                 </div>
               )}
 
-              {/* Deadline — colour-coded for urgency per S1-002 §4.3 */}
               {isEditing ? (
                 <div className="mt-2 flex flex-col gap-1.5">
                   <Label htmlFor="deadline-date" className="text-xs text-gray-500">
@@ -510,7 +489,6 @@ export function JobDetailPanel({
                 </div>
               ) : null}
 
-              {/* DESCRIPTION */}
               {isEditing ? (
                 <div className="mt-2 flex flex-col gap-1.5">
                   <Label htmlFor="description" className="text-xs text-gray-500">
@@ -531,7 +509,6 @@ export function JobDetailPanel({
                 </div>
               ) : null}
 
-              {/* COMPENSATION NOTES */}
               {isEditing ? (
                 <div className="mt-2 flex flex-col gap-1.5">
                   <Label htmlFor="compensationNotes" className="text-xs text-gray-500">
@@ -555,6 +532,7 @@ export function JobDetailPanel({
               ) : null}
             </div>
 
+            {/* Document Tools section */}
             <div className="mt-5 flex flex-col gap-3 border-b border-gray-100 pb-5 print:hidden">
               <div className="flex flex-col gap-1">
                 <h3 className="text-sm font-semibold text-gray-700">Document Tools</h3>
@@ -639,6 +617,20 @@ export function JobDetailPanel({
               )}
             </div>
 
+            {/* S3-009: Link Documents — allows linking/unlinking library
+                documents to this job. Auth and ownership enforced on the
+                backend per S1-003 §4.3. */}
+            <div className="mt-5 flex flex-col gap-3 border-b border-gray-100 pb-5">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-sm font-semibold text-gray-700">Link Documents</h3>
+                <p className="text-sm text-gray-500">
+                  Link existing documents from your library to this job.
+                </p>
+              </div>
+              <JobDocumentLinker jobId={job.id} onLinkChanged={handleDocumentSaved} />
+            </div>
+
+            {/* Saved Documents section */}
             <div className="mt-5 flex flex-col gap-3 border-b border-gray-100 pb-5">
               <div className="flex flex-col gap-1">
                 <h3 className="text-sm font-semibold text-gray-700">Saved Documents</h3>
@@ -653,7 +645,6 @@ export function JobDetailPanel({
               />
             </div>
 
-            {/* NOTES SECTION — recruiter notes and custom notes */}
             {isEditing ? (
               <div className="mt-5 flex flex-col gap-5 border-b border-gray-100 pb-5">
                 <h3 className="text-sm font-semibold text-gray-700">Edit Notes</h3>
@@ -708,9 +699,6 @@ export function JobDetailPanel({
               )
             )}
 
-            {/* S2-011: Interview Section — shows scheduled interviews and
-    allows adding new interview events with round type, date/time,
-    location, and notes. Auth and ownership enforced on the backend. */}
             <div className="mt-5 border-b border-gray-100 pb-5">
               <InterviewSection jobId={job.id} />
             </div>
@@ -720,13 +708,6 @@ export function JobDetailPanel({
               onReminderSaved={() => setActivityRefreshKey((prev) => prev + 1)}
             />
 
-            {/* S2-010: Activity Timeline — shows all stage changes, interviews,
-    and note updates for this job in reverse chronological order.
-    The timeline component fetches from the protected API route which
-    enforces ownership server-side per S1-003 §4.3.
-    - Blue dot: stage changes
-    - Amber dot: interview events (from S2-011)
-    - Gray dot: note updates */}
             <div className="mt-5">
               <JobActivityTimeline jobId={job.id} refreshKey={activityRefreshKey} />
             </div>
