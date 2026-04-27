@@ -98,9 +98,9 @@ describe('createExperience', () => {
   it('creates a new Experience record for the user', async () => {
     mockSingle.mockResolvedValue({ data: mockRecord, error: null });
     const result = await createExperience('user-abc', {
-      institution: 'NJIT',
-      degree: 'Bachelor of Science',
-      field_of_study: 'Computer Science',
+      company_name: 'NJIT',
+      role_title: 'Bachelor of Science',
+      location: 'Computer Science',
       is_current: true,
       order_index: 0,
     });
@@ -113,9 +113,9 @@ describe('createExperience', () => {
   it('inserts with the session user_id not from request body', async () => {
     mockSingle.mockResolvedValue({ data: mockRecord, error: null });
     await createExperience('user-abc', {
-      institution: 'NJIT',
-      degree: 'BS',
-      field_of_study: 'CS',
+      company_name: 'NJIT',
+      role_title: 'BS',
+      location: 'CS',
       is_current: false,
       order_index: 0,
     });
@@ -126,9 +126,9 @@ describe('createExperience', () => {
   it('returns an error when the database call fails', async () => {
     mockSingle.mockResolvedValue({ data: null, error: { message: 'DB error' } });
     const result = await createExperience('user-abc', {
-      institution: 'NJIT',
-      degree: 'BS',
-      field_of_study: 'CS',
+      company_name: 'NJIT',
+      role_title: 'SWE',
+      location: 'CS',
       is_current: false,
       order_index: 0,
     });
@@ -140,14 +140,14 @@ describe('updateExperience', () => {
   // HAPPY PATH — updates an existing record.
   it('updates an Experience record owned by the user', async () => {
     mockSingleUpdate.mockResolvedValue({ data: mockRecord, error: null });
-    const result = await updateExperience('edu-123', 'user-abc', { institution: 'MIT' });
+    const result = await updateExperience('edu-123', 'user-abc', { company_name: 'MIT' });
     expect(result.data).toEqual(mockRecord);
   });
 
   // OWNERSHIP — verify both id and user_id filters applied.
   it('enforces ownership by filtering on both id and user_id', async () => {
     mockSingleUpdate.mockResolvedValue({ data: mockRecord, error: null });
-    await updateExperience('edu-123', 'user-abc', { institution: 'MIT' });
+    await updateExperience('edu-123', 'user-abc', { company_name: 'MIT' });
     expect(mockEqIdUpdate).toHaveBeenCalledWith('id', 'edu-123');
     expect(mockEqUserIdUpdate).toHaveBeenCalledWith('user_id', 'user-abc');
   });
@@ -155,7 +155,7 @@ describe('updateExperience', () => {
   // OWNERSHIP DENIAL — wrong user gets null back.
   it('returns null when user does not own the record', async () => {
     mockSingleUpdate.mockResolvedValue({ data: null, error: { message: 'No rows' } });
-    const result = await updateExperience('edu-123', 'wrong-user', { institution: 'MIT' });
+    const result = await updateExperience('edu-123', 'wrong-user', { company_name: 'MIT' });
     expect(result.data).toBeNull();
   });
 });

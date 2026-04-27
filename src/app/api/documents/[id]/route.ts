@@ -12,7 +12,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { id } = await params;
   const body = await request.json();
 
-  const { data, error } = await updateDocument(id, user.id, body);
+  // Prevent mass assignment vulnerabilities by stripping protected fields
+  const { id: _id, user_id: _userId, created_at: _createdAt, ...safeUpdates } = body;
+
+  const { data, error } = await updateDocument(id, user.id, safeUpdates);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
