@@ -1,9 +1,34 @@
-import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { apiSuccess, apiError } from '@/lib/utils/apiResponse';
 import { getJobById, updateJob, deleteJob } from '@/lib/services/jobServices';
 import { revalidatePath } from 'next/cache';
 import { isDateInputBeforeToday } from '@/lib/utils/dateValidation';
+import { NextRequest, NextResponse } from 'next/server';
+import { updateJobStage } from '@/lib/services/jobServices';
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // 1. Check Auth
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await params;
+  const body = await request.json();
+
+  try {
+    // 2. Pass all THREE arguments: id, user.id, and the new status
+    const { data, error } = await updateJobStage(id, user.id, body.status);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json(data);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
 
 function getDateOnly(value?: string) {
   return value?.slice(0, 10);
