@@ -1,10 +1,11 @@
 'use client';
 
-// SavedDocuments - S2-024 + S3-005 + S3-006.
+// SavedDocuments - S2-024 + S3-005 + S3-006 + S3-007.
 // Displays all saved document drafts for the authenticated user.
 // Shows cover letters and resumes with their linked job context.
-// Users can view, copy, download, or delete saved documents.
+// Users can view, copy, export, duplicate, rename, or delete saved documents.
 // S3-006: filter by type and sort by date/name via LibraryControls.
+// S3-007: duplicate and rename actions for saved documents.
 //
 // Per S1-002 section 11.1 - each section manages its own data independently.
 // Per S1-003 - auth and ownership enforced on the backend.
@@ -15,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Plus, X } from 'lucide-react';
+import { buildDuplicateDocumentName } from '@/lib/utils/documentNames';
 import { formatTimestamp } from '@/lib/utils/dateFormatters';
 import {
   exportDocumentPdf,
@@ -92,6 +94,8 @@ export function SavedDocuments({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [exportedId, setExportedId] = useState<string | null>(null);
+  const [renamedId, setRenamedId] = useState<string | null>(null);
+  const [duplicatedId, setDuplicatedId] = useState<string | null>(null);
   const [addingTagId, setAddingTagId] = useState<string | null>(null);
   const [newTagText, setNewTagText] = useState<string>('');
 
@@ -105,10 +109,12 @@ export function SavedDocuments({
     }
 
     result.sort((a, b) => {
-      if (sortOrder === 'newest')
+      if (sortOrder === 'newest') {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      if (sortOrder === 'oldest')
+      }
+      if (sortOrder === 'oldest') {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
       return a.name.localeCompare(b.name);
     });
 
@@ -165,6 +171,65 @@ export function SavedDocuments({
       window.setTimeout(() => setExportedId(null), 2000);
     } catch {
       setError('Could not export this document as PDF.');
+    }
+  }
+
+  async function handleRename(doc: SavedDocument) {
+    const nextName = window.prompt('Rename this document:', doc.name)?.trim();
+
+    if (!nextName || nextName === doc.name) return;
+
+    try {
+      setError(null);
+      const res = await fetch(`/api/documents/${doc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: nextName }),
+      });
+
+      if (!res.ok) {
+        setError('Could not rename this document.');
+        return;
+      }
+
+      const updatedDoc = await res.json();
+      setDocuments((prev) =>
+        prev.map((item) => (item.id === doc.id ? { ...item, ...updatedDoc } : item)),
+      );
+      setRenamedId(doc.id);
+      window.setTimeout(() => setRenamedId(null), 2000);
+    } catch {
+      setError('Could not rename this document.');
+    }
+  }
+
+  async function handleDuplicate(doc: SavedDocument) {
+    try {
+      setError(null);
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: doc.job_id,
+          type: doc.type,
+          name: buildDuplicateDocumentName(doc.name),
+          content: doc.content,
+        }),
+      });
+
+      if (!res.ok) {
+        setError('Could not duplicate this document.');
+        return;
+      }
+
+      const json = await res.json();
+      if (json.data) {
+        setDocuments((prev) => [json.data, ...prev]);
+      }
+      setDuplicatedId(doc.id);
+      window.setTimeout(() => setDuplicatedId(null), 2000);
+    } catch {
+      setError('Could not duplicate this document.');
     }
   }
 
@@ -291,7 +356,6 @@ export function SavedDocuments({
                   >
                     {doc.type === 'cover_letter' ? 'Cover Letter' : 'Resume'}
                   </span>
-                  {/* S3-002: Status badge — click to cycle through draft/final/archived */}
                   <button
                     onClick={() =>
                       handleStatusChange(
@@ -343,6 +407,22 @@ export function SavedDocuments({
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={() => void handleDuplicate(doc)}
+                  className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  {duplicatedId === doc.id ? 'Duplicated!' : 'Duplicate'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void handleRename(doc)}
+                  className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  {renamedId === doc.id ? 'Renamed!' : 'Rename'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => void handleExportPdf(doc)}
                   className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
                 >
@@ -361,6 +441,84 @@ export function SavedDocuments({
 
             {expandedId === doc.id && (
               <div className="border-t border-gray-100 px-4 py-3">
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    {(doc.tags || []).map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => void handleRemoveTag(doc, tag)}
+                          className="rounded-full text-gray-400 transition-colors hover:text-red-500"
+                          aria-label={`Remove tag ${tag}`}
+                        >
+                          <X size={12} />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+
+                  {addingTagId === doc.id ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={newTagText}
+                        onChange={(e) => setNewTagText(e.target.value)}
+                        placeholder="Add tag..."
+                        className="h-8 w-32 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            void handleAddTag(doc);
+                          }
+                          if (e.key === 'Escape') {
+                            setAddingTagId(null);
+                            setNewTagText('');
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void handleAddTag(doc)}
+                        className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAddingTagId(doc.id)}
+                      className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      <Plus size={12} className="mr-1" /> Add Tag
+                    </Button>
+                  )}
+                </div>
+
+                {allUniqueTags.length > 0 && (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {allUniqueTags
+                      .filter((tag) => !(doc.tags || []).includes(tag))
+                      .map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => void handleAddTag(doc, tag)}
+                          className="rounded-full border border-gray-200 px-2 py-0.5 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                  </div>
+                )}
+
                 {(() => {
                   if (doc.type === 'cover_letter') {
                     const parsed = parseDocumentContent<CoverLetterDocument>(doc.content);
