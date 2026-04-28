@@ -5,8 +5,10 @@ import { CoverLetterGenerator } from '@/components/documents/CoverLetterGenerato
 import { ResumeGenerator } from '@/components/documents/ResumeGenerator';
 import { SavedDocuments } from '@/components/documents/SavedDocuments';
 
-// DocumentsPage — S2-022, S2-023, S2-024.
-// Hosts the cover letter generator, resume generator, and saved documents list.
+import { DocumentUploader } from '@/components/documents/DocumentUploader';
+
+// DocumentsPage — S2-022, S2-023, S2-024, S3-004.
+// Hosts the cover letter generator, resume generator, file uploader, and saved documents list.
 // Per S1-002 §4.1 — Document Library is a required app screen.
 
 export default function DocumentsPage() {
@@ -21,7 +23,8 @@ export default function DocumentsPage() {
       <div className="mb-8 print:hidden">
         <h1 className="text-foreground text-3xl font-bold">Document Library</h1>
         <p className="text-muted-foreground mt-2">
-          Generate tailored cover letters and resumes from your profile and job data.
+          Generate tailored cover letters and resumes, or upload your own documents to store them in
+          your library.
         </p>
       </div>
 
@@ -50,12 +53,23 @@ export default function DocumentsPage() {
         <ResumeGenerator onSaved={handleDocumentSaved} />
       </div>
 
+      {/* Document Uploader — S3-004 */}
+      <div className="mt-8 flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 print:hidden">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-xl font-semibold text-gray-900">Upload Document</h2>
+          <p className="text-sm text-gray-500">
+            Upload your own PDF or Word documents to add them to your library.
+          </p>
+        </div>
+        <DocumentUploader onUploadComplete={handleDocumentSaved} />
+      </div>
+
       {/* Saved Documents — S2-024 */}
       <div className="mt-8 flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6">
         <div className="flex flex-col gap-1">
           <h2 className="text-xl font-semibold text-gray-900">Saved Documents</h2>
           <p className="text-sm text-gray-500">
-            Your saved cover letters and resumes linked to job context.
+            Your generated and uploaded cover letters and resumes.
           </p>
         </div>
         <SavedDocuments refreshKey={refreshKey} />
