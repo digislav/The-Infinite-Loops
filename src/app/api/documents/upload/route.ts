@@ -55,9 +55,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to upload file to storage.' }, { status: 500 });
     }
 
+    // Build document name matching the AI-generated format: "Resume — Job at Company"
+    let docName = file.name.replace(/\.[^/.]+$/, '');
+    if (jobId) {
+      const { data: job } = await supabase
+        .from('jobs')
+        .select('job_title, company_name')
+        .eq('id', jobId)
+        .eq('user_id', user.id)
+        .single();
+      if (job) {
+        const typeLabel = type === 'resume' ? 'Resume' : 'Cover Letter';
+        docName = `${typeLabel} — ${job.job_title} at ${job.company_name}`;
+      }
+    }
+
     // Create database record using S3-003 versioning logic
     const contentPlaceholder = `[Uploaded File: ${file.name}]`;
-    const docName = file.name.replace(/\.[^/.]+$/, ''); // Strip extension for the DB name
 
     const result = await createDocumentWithVersion(user.id, {
       name: docName,

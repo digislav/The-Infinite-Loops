@@ -31,8 +31,11 @@ interface SavedDocument {
   type: 'cover_letter' | 'resume';
   name: string;
   content: string;
-  status: 'draft' | 'final' | 'archived';
+  status: 'draft' | 'final';
+  is_archived?: boolean;
   tags: string[];
+  file_path?: string | null;
+  original_filename?: string | null;
   created_at: string;
 }
 
@@ -87,10 +90,12 @@ export function SavedDocuments({
   emptyMessage = 'No saved documents yet. Generate a cover letter or resume and save it.',
 }: SavedDocumentsProps) {
   const [documents, setDocuments] = useState<SavedDocument[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [typeFilter, setTypeFilter] = useState<DocumentTypeFilter>('all');
   const [sortOrder, setSortOrder] = useState<DocumentSortOrder>('newest');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [exportedId, setExportedId] = useState<string | null>(null);
@@ -98,6 +103,7 @@ export function SavedDocuments({
   const [duplicatedId, setDuplicatedId] = useState<string | null>(null);
   const [addingTagId, setAddingTagId] = useState<string | null>(null);
   const [newTagText, setNewTagText] = useState<string>('');
+  const [downloadUrls, setDownloadUrls] = useState<Record<string, string>>({});
 
   const allUniqueTags = Array.from(new Set(documents.flatMap((d) => d.tags || [])));
 
@@ -129,7 +135,8 @@ export function SavedDocuments({
       setError(null);
 
       try {
-        const url = jobId ? `/api/documents?jobId=${encodeURIComponent(jobId)}` : '/api/documents';
+        const base = jobId ? `/api/documents?jobId=${encodeURIComponent(jobId)}` : '/api/documents';
+        const url = showArchived ? `${base}${jobId ? '&' : '?'}showArchived=true` : base;
         const res = await fetch(url);
         if (!res.ok) {
           if (!cancelled) setError('Could not load saved documents.');
@@ -149,7 +156,25 @@ export function SavedDocuments({
     return () => {
       cancelled = true;
     };
-  }, [jobId, refreshKey]);
+  }, [jobId, refreshKey, showArchived]);
+
+  // Pre-fetch the signed download URL when a file-backed document is expanded.
+  useEffect(() => {
+    if (!expandedId) return;
+    const doc = documents.find((d) => d.id === expandedId);
+    if (!doc?.file_path || downloadUrls[expandedId]) return;
+
+    let cancelled = false;
+    fetch(`/api/documents/${expandedId}/download`)
+      .then((res) => res.json())
+      .then(({ url }: { url?: string }) => {
+        if (url && !cancelled) setDownloadUrls((prev) => ({ ...prev, [expandedId]: url }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [expandedId, documents, downloadUrls]);
 
   async function handleCopy(doc: SavedDocument) {
     try {
@@ -163,14 +188,16 @@ export function SavedDocuments({
     }
   }
 
-  async function handleExportPdf(doc: SavedDocument) {
+  function handleExportPdf(doc: SavedDocument) {
     try {
-      setError(null);
-      await exportDocumentPdf(doc);
+      setActionError(null);
+      exportDocumentPdf(doc);
       setExportedId(doc.id);
       window.setTimeout(() => setExportedId(null), 2000);
-    } catch {
-      setError('Could not export this document as PDF.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not export this document as PDF.';
+      setActionError(msg);
+      window.setTimeout(() => setActionError(null), 4000);
     }
   }
 
@@ -180,7 +207,7 @@ export function SavedDocuments({
     if (!nextName || nextName === doc.name) return;
 
     try {
-      setError(null);
+      setActionError(null);
       const res = await fetch(`/api/documents/${doc.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -188,7 +215,7 @@ export function SavedDocuments({
       });
 
       if (!res.ok) {
-        setError('Could not rename this document.');
+        setActionError('Could not rename this document.');
         return;
       }
 
@@ -199,13 +226,13 @@ export function SavedDocuments({
       setRenamedId(doc.id);
       window.setTimeout(() => setRenamedId(null), 2000);
     } catch {
-      setError('Could not rename this document.');
+      setActionError('Could not rename this document.');
     }
   }
 
   async function handleDuplicate(doc: SavedDocument) {
     try {
-      setError(null);
+      setActionError(null);
       const res = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -218,7 +245,7 @@ export function SavedDocuments({
       });
 
       if (!res.ok) {
-        setError('Could not duplicate this document.');
+        setActionError('Could not duplicate this document.');
         return;
       }
 
@@ -247,7 +274,8 @@ export function SavedDocuments({
     }
   }
 
-  async function handleStatusChange(doc: SavedDocument, newStatus: 'draft' | 'final' | 'archived') {
+  async function handleStatusToggle(doc: SavedDocument) {
+    const newStatus = doc.status === 'final' ? 'draft' : 'final';
     try {
       const res = await fetch(`/api/documents/${doc.id}`, {
         method: 'PATCH',
@@ -258,6 +286,21 @@ export function SavedDocuments({
       setDocuments((prev) =>
         prev.map((item) => (item.id === doc.id ? { ...item, status: newStatus } : item)),
       );
+    } catch {
+      // Silently fail.
+    }
+  }
+
+  async function handleArchive(doc: SavedDocument, archive: boolean) {
+    try {
+      const res = await fetch(`/api/documents/${doc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archive }),
+      });
+      if (!res.ok) return;
+      setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
+      if (expandedId === doc.id) setExpandedId(null);
     } catch {
       // Silently fail.
     }
@@ -327,17 +370,42 @@ export function SavedDocuments({
   }
 
   if (documents.length === 0) {
-    return <p className="text-sm text-gray-400">{emptyMessage}</p>;
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowArchived((prev) => !prev)}
+            className="text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
+          >
+            {showArchived ? '← Back to documents' : 'View archived'}
+          </button>
+        </div>
+        <p className="text-sm text-gray-400">
+          {showArchived ? 'No archived documents.' : emptyMessage}
+        </p>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <LibraryControls
-        typeFilter={typeFilter}
-        sortOrder={sortOrder}
-        onTypeFilterChange={setTypeFilter}
-        onSortOrderChange={setSortOrder}
-      />
+      {actionError && (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{actionError}</p>
+      )}
+      <div className="flex items-center justify-between">
+        <LibraryControls
+          typeFilter={typeFilter}
+          sortOrder={sortOrder}
+          onTypeFilterChange={setTypeFilter}
+          onSortOrderChange={setSortOrder}
+        />
+        <button
+          onClick={() => setShowArchived((prev) => !prev)}
+          className="text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
+        >
+          {showArchived ? '← Back to documents' : 'View archived'}
+        </button>
+      </div>
 
       {filteredAndSorted.length === 0 ? (
         <p className="text-sm text-gray-400">No documents match the selected filter.</p>
@@ -356,30 +424,24 @@ export function SavedDocuments({
                   >
                     {doc.type === 'cover_letter' ? 'Cover Letter' : 'Resume'}
                   </span>
-                  <button
-                    onClick={() =>
-                      handleStatusChange(
-                        doc,
-                        doc.status === 'draft'
-                          ? 'final'
-                          : doc.status === 'final'
-                            ? 'archived'
-                            : 'draft',
-                      )
-                    }
-                    className={`cursor-pointer rounded-full px-2 py-0.5 text-xs font-medium transition-colors hover:opacity-80 ${
-                      doc.status === 'final'
-                        ? 'bg-purple-100 text-purple-700'
-                        : doc.status === 'archived'
-                          ? 'bg-gray-100 text-gray-700'
+                  {!showArchived && (
+                    <button
+                      onClick={() => void handleStatusToggle(doc)}
+                      className={`cursor-pointer rounded-full px-2 py-0.5 text-xs font-medium transition-colors hover:opacity-80 ${
+                        doc.status === 'final'
+                          ? 'bg-purple-100 text-purple-700'
                           : 'bg-amber-100 text-amber-700'
-                    }`}
-                    title="Click to cycle status"
-                  >
-                    {doc.status
-                      ? doc.status.charAt(0).toUpperCase() + doc.status.slice(1)
-                      : 'Draft'}
-                  </button>
+                      }`}
+                      title="Click to toggle Draft / Final"
+                    >
+                      {doc.status === 'final' ? 'Final' : 'Draft'}
+                    </button>
+                  )}
+                  {showArchived && (
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                      Archived
+                    </span>
+                  )}
                   <span className="text-sm font-semibold text-gray-800">{doc.name}</span>
                 </div>
                 <span className="text-xs text-gray-400">
@@ -404,22 +466,26 @@ export function SavedDocuments({
                 >
                   {copiedId === doc.id ? 'Copied!' : 'Copy'}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => void handleDuplicate(doc)}
-                  className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
-                >
-                  {duplicatedId === doc.id ? 'Duplicated!' : 'Duplicate'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => void handleRename(doc)}
-                  className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
-                >
-                  {renamedId === doc.id ? 'Renamed!' : 'Rename'}
-                </Button>
+                {!showArchived && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void handleDuplicate(doc)}
+                      className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      {duplicatedId === doc.id ? 'Duplicated!' : 'Duplicate'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void handleRename(doc)}
+                      className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      {renamedId === doc.id ? 'Renamed!' : 'Rename'}
+                    </Button>
+                  </>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -428,6 +494,25 @@ export function SavedDocuments({
                 >
                   {exportedId === doc.id ? 'Exported!' : 'Export PDF'}
                 </Button>
+                {showArchived ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void handleArchive(doc, false)}
+                    className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Restore
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void handleArchive(doc, true)}
+                    className="h-7 px-3 text-xs text-gray-400 hover:text-amber-600"
+                  >
+                    Archive
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -520,6 +605,31 @@ export function SavedDocuments({
                 )}
 
                 {(() => {
+                  // Uploaded files have a file_path — show a download link instead of parsed content.
+                  if (doc.file_path) {
+                    const signedUrl = downloadUrls[doc.id];
+                    return (
+                      <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                        <span className="text-sm text-gray-600">
+                          {doc.original_filename ?? 'Uploaded file'}
+                        </span>
+                        {signedUrl ? (
+                          <a
+                            href={signedUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={doc.original_filename ?? true}
+                            className="ml-auto rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                          >
+                            Open / Download
+                          </a>
+                        ) : (
+                          <span className="ml-auto text-xs text-gray-400">Loading link…</span>
+                        )}
+                      </div>
+                    );
+                  }
+
                   if (doc.type === 'cover_letter') {
                     const parsed = parseDocumentContent<CoverLetterDocument>(doc.content);
                     if (!parsed) {

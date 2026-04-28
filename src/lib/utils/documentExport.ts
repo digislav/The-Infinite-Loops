@@ -265,41 +265,41 @@ function buildDocumentExportHtml(doc: SavedDocumentForExport) {
   return parsed ? buildResumeHtml(parsed) : `<pre>${escapeHtml(doc.content)}</pre>`;
 }
 
-function createPdfContainer(doc: SavedDocumentForExport) {
-  const container = document.createElement('div');
-  container.setAttribute('aria-hidden', 'true');
-  container.style.position = 'fixed';
-  container.style.left = '-200vw';
-  container.style.top = '0';
-  container.style.width = '816px';
-  container.style.background = '#ffffff';
-  container.style.padding = '48px';
-  container.style.boxSizing = 'border-box';
-  container.style.zIndex = '-1';
-  container.style.fontFamily = 'Arial, Helvetica, sans-serif';
-  container.innerHTML = buildDocumentExportHtml(doc);
-  document.body.appendChild(container);
-  return container;
-}
+// Opens the document in a new window and triggers the browser's native
+// print dialog. The user selects "Save as PDF" (or their printer).
+// This replaces html2pdf.js which was unreliable in Next.js due to
+// html2canvas failing silently on off-screen elements.
+export function exportDocumentPdf(doc: SavedDocumentForExport): void {
+  const html = buildDocumentExportHtml(doc);
+  const title = escapeHtml(doc.name);
 
-export async function exportDocumentPdf(doc: SavedDocumentForExport) {
-  const container = createPdfContainer(doc);
+  const pageHtml =
+    '<!DOCTYPE html><html lang="en"><head>' +
+    '<meta charset="utf-8"><title>' +
+    title +
+    '</title>' +
+    '<style>' +
+    '*,*::before,*::after{box-sizing:border-box;}' +
+    'body{margin:0;padding:0.75in;font-family:Arial,Helvetica,sans-serif;color:#111827;background:#fff;}' +
+    'h1,h2,h3,p,ul{margin:0;}ul{padding-left:1.25em;}' +
+    '@media print{body{padding:0.5in;}@page{margin:0.5in;size:letter portrait;}}' +
+    '</style></head><body>' +
+    html +
+    '</body></html>';
 
-  try {
-    const html2pdfModule = await import('html2pdf.js');
-    const html2pdf = html2pdfModule.default;
+  const blob = new Blob([pageHtml], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
 
-    await html2pdf()
-      .set({
-        margin: 0.5,
-        filename: getDocumentPdfFileName(doc),
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
-      })
-      .from(container)
-      .save();
-  } finally {
-    container.remove();
+  const printWindow = window.open(url, '_blank', 'width=900,height=1100');
+  if (!printWindow) {
+    URL.revokeObjectURL(url);
+    throw new Error('Allow popups for this site to export PDF.');
   }
+
+  printWindow.addEventListener('load', () => {
+    URL.revokeObjectURL(url);
+    printWindow.focus();
+    printWindow.print();
+    printWindow.addEventListener('afterprint', () => printWindow.close());
+  });
 }

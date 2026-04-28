@@ -12,12 +12,15 @@ export async function GET(request: NextRequest) {
 
   try {
     const jobId = request.nextUrl.searchParams.get('jobId');
+    const showArchived = request.nextUrl.searchParams.get('showArchived') === 'true';
+
     const { data, error } = jobId
       ? await getDocumentsByJob(user.id, jobId)
       : await supabase
           .from('documents')
           .select('*')
           .eq('user_id', user.id)
+          .eq('is_archived', showArchived)
           .order('created_at', { ascending: false });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
