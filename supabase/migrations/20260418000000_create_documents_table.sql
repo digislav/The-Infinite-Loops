@@ -26,3 +26,9 @@ DO $$ BEGIN
     WITH CHECK (auth.uid() = user_id);
   END IF;
 END $$;
+
+ALTER TABLE public.documents 
+ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
+
+-- Index for faster filtering on the documents page
+CREATE INDEX IF NOT EXISTS idx_documents_is_archived ON public.documents(is_archived);
