@@ -1,11 +1,11 @@
 'use client';
 
+import { LinkedDocumentsList } from '@/components/documents/LinkedDocumentsList';
 import { InterviewSection } from './InterviewSection';
 import { JobActivityTimeline } from './JobActivityTimeline';
 import { ReminderSection } from './ReminderSection';
 import { CoverLetterGenerator } from '@/components/documents/CoverLetterGenerator';
 import { ResumeGenerator } from '@/components/documents/ResumeGenerator';
-import { SavedDocuments } from '@/components/documents/SavedDocuments';
 import { JobDocumentLinker } from '@/components/documents/JobDocumentLinker';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -41,6 +41,7 @@ const stageStyles: Record<PipelineStage, string> = {
   Archived: 'bg-gray-100 text-gray-500',
 };
 
+// All pipeline stages in display order — per S1-002 §4.5.
 const PIPELINE_STAGES: PipelineStage[] = [
   'Interested',
   'Applied',
@@ -157,6 +158,8 @@ export function JobDetailPanel({
         job_title: title,
         company_name: company,
         location: location || undefined,
+        // Only include current_stage if it changed — avoids triggering a
+        // STAGE_CHANGE activity when nothing moved per S2-009 conventions.
         ...(pipelineStage !== job.pipelineStage && { current_stage: pipelineStage }),
         is_priority: priorityFlag,
         deadline: deadlineDateStr
@@ -171,6 +174,9 @@ export function JobDetailPanel({
         outcome_notes: outcomeNotes || undefined,
       };
 
+      // Use fetch() — never call Supabase directly from the frontend for
+      // mutations. The API route enforces ownership via supabase.auth.getUser()
+      // per S1-003 §2.3. user_id is never sent from the client.
       const res = await fetch(`/api/jobs/${job.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -179,6 +185,7 @@ export function JobDetailPanel({
 
       if (!res.ok) throw new Error('Failed to update job detail');
 
+      // Notify parent so the board card updates immediately without a refetch.
       onJobUpdated?.({
         title,
         company,
@@ -199,12 +206,15 @@ export function JobDetailPanel({
 
       setIsEditing(false);
     } catch {
+      // Human-friendly error — never expose raw server messages per S1-001 §6.3.
       setEditError('Failed to save changes. Please try again.');
     } finally {
       setIsSaving(false);
     }
   }
 
+  // Increment documentRefreshKey to trigger a re-fetch in LinkedDocumentsList
+  // and JobDocumentLinker whenever a document is saved, linked, or unlinked.
   function handleDocumentSaved() {
     setDocumentRefreshKey((current) => current + 1);
   }
@@ -532,7 +542,8 @@ export function JobDetailPanel({
               ) : null}
             </div>
 
-            {/* Document Tools section */}
+            {/* Document Tools section — generate cover letter or resume
+                directly from this job context per S2-022/S2-023. */}
             <div className="mt-5 flex flex-col gap-3 border-b border-gray-100 pb-5 print:hidden">
               <div className="flex flex-col gap-1">
                 <h3 className="text-sm font-semibold text-gray-700">Document Tools</h3>
@@ -617,6 +628,25 @@ export function JobDetailPanel({
               )}
             </div>
 
+            {/* S3-010: Linked Documents — focused view of documents attached to
+                this job. Shows type/status badges, inline preview, copy, export,
+                and unlink actions. Refreshes when documentRefreshKey increments.
+                Auth and ownership enforced on the backend per S1-003 §5.2. */}
+            <div className="mt-5 flex flex-col gap-3 border-b border-gray-100 pb-5">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-sm font-semibold text-gray-700">Linked Documents</h3>
+                <p className="text-sm text-gray-500">
+                  Documents attached to this job. Unlink to remove from this job without deleting
+                  from your library.
+                </p>
+              </div>
+              <LinkedDocumentsList
+                jobId={job.id}
+                refreshKey={documentRefreshKey}
+                onUnlinked={handleDocumentSaved}
+              />
+            </div>
+
             {/* S3-009: Link Documents — allows linking/unlinking library
                 documents to this job. Auth and ownership enforced on the
                 backend per S1-003 §4.3. */}
@@ -628,21 +658,6 @@ export function JobDetailPanel({
                 </p>
               </div>
               <JobDocumentLinker jobId={job.id} onLinkChanged={handleDocumentSaved} />
-            </div>
-
-            {/* Saved Documents section */}
-            <div className="mt-5 flex flex-col gap-3 border-b border-gray-100 pb-5">
-              <div className="flex flex-col gap-1">
-                <h3 className="text-sm font-semibold text-gray-700">Saved Documents</h3>
-                <p className="text-sm text-gray-500">
-                  Documents linked to this job also remain available in the document library.
-                </p>
-              </div>
-              <SavedDocuments
-                refreshKey={documentRefreshKey}
-                jobId={job.id}
-                emptyMessage="No saved documents are linked to this job yet."
-              />
             </div>
 
             {isEditing ? (
