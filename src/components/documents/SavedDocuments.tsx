@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { buildDuplicateDocumentName } from '@/lib/utils/documentNames';
 import { formatTimestamp } from '@/lib/utils/dateFormatters';
 import {
   exportDocumentPdf,
@@ -83,6 +84,8 @@ export function SavedDocuments({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [exportedId, setExportedId] = useState<string | null>(null);
+  const [renamedId, setRenamedId] = useState<string | null>(null);
+  const [duplicatedId, setDuplicatedId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,6 +137,65 @@ export function SavedDocuments({
       window.setTimeout(() => setExportedId(null), 2000);
     } catch {
       setError('Could not export this document as PDF.');
+    }
+  }
+
+  async function handleRename(doc: SavedDocument) {
+    const nextName = window.prompt('Rename this document:', doc.name)?.trim();
+
+    if (!nextName || nextName === doc.name) return;
+
+    try {
+      setError(null);
+      const res = await fetch(`/api/documents/${doc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: nextName }),
+      });
+
+      if (!res.ok) {
+        setError('Could not rename this document.');
+        return;
+      }
+
+      const updatedDoc = await res.json();
+      setDocuments((prev) =>
+        prev.map((item) => (item.id === doc.id ? { ...item, ...updatedDoc } : item)),
+      );
+      setRenamedId(doc.id);
+      window.setTimeout(() => setRenamedId(null), 2000);
+    } catch {
+      setError('Could not rename this document.');
+    }
+  }
+
+  async function handleDuplicate(doc: SavedDocument) {
+    try {
+      setError(null);
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: doc.job_id,
+          type: doc.type,
+          name: buildDuplicateDocumentName(doc.name),
+          content: doc.content,
+        }),
+      });
+
+      if (!res.ok) {
+        setError('Could not duplicate this document.');
+        return;
+      }
+
+      const json = await res.json();
+      if (json.data) {
+        setDocuments((prev) => [json.data, ...prev]);
+      }
+      setDuplicatedId(doc.id);
+      window.setTimeout(() => setDuplicatedId(null), 2000);
+    } catch {
+      setError('Could not duplicate this document.');
     }
   }
 
@@ -205,6 +267,22 @@ export function SavedDocuments({
                 className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
               >
                 {copiedId === doc.id ? 'Copied!' : 'Copy'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void handleDuplicate(doc)}
+                className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
+              >
+                {duplicatedId === doc.id ? 'Duplicated!' : 'Duplicate'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void handleRename(doc)}
+                className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700"
+              >
+                {renamedId === doc.id ? 'Renamed!' : 'Rename'}
               </Button>
               <Button
                 variant="ghost"
