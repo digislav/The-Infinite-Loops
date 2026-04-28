@@ -33,7 +33,15 @@ export async function toggleDocumentArchive(docId: string, userId: string, archi
  */
 export async function createDocumentWithVersion(
   userId: string,
-  docData: { name: string; type: string; job_id?: string; content: string },
+  docData: {
+    name: string;
+    type: string;
+    job_id?: string;
+    content: string;
+    file_path?: string;
+    file_size?: number;
+    original_filename?: string;
+  },
 ) {
   const supabase = await createClient();
 
@@ -48,6 +56,9 @@ export async function createDocumentWithVersion(
         type: docData.type,
         job_id: docData.job_id,
         content: docData.content, // <--- ADD THIS LINE
+        file_path: docData.file_path,
+        file_size: docData.file_size,
+        original_filename: docData.original_filename,
       },
     ])
     .select()
@@ -112,6 +123,9 @@ export interface Document {
   content: string;
   status?: 'draft' | 'final' | 'archived';
   tags?: string[];
+  file_path?: string | null;
+  file_size?: number | null;
+  original_filename?: string | null;
   created_at?: string;
   updated_at?: string;
 }
