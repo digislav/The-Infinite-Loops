@@ -17,7 +17,7 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl print:w-full print:max-w-none">
+    <div className="mx-auto max-w-3xl pb-24 print:w-full print:max-w-none print:pb-0">
       <div className="mb-8 print:hidden">
         <h1 className="text-foreground text-3xl font-bold">Document Library</h1>
         <p className="text-muted-foreground mt-2">

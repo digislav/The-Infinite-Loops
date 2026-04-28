@@ -1,0 +1,123 @@
+
+> the-infinite-loops@0.1.0 test
+> jest --colors=false
+
+PASS __tests__/interviewSection.test.ts
+PASS __tests__/jobWorkflow.test.ts
+PASS __tests__/experience.test.ts
+PASS __tests__/jobDetail.test.ts
+PASS __tests__/profileCompletion.test.ts
+PASS __tests__/educationService.test.ts
+PASS __tests__/stageIndicators.test.ts
+FAIL __tests__/jobs.test.ts
+  ● formatTimestamp › formats a UTC timestamp to a valid m/d/yy string
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "4/7/26"
+    Received: "4/7/26, 8:00 AM"
+
+      47 |     // 2026-04-07T12:00:00Z is noon UTC = 8am EST — still April 7 in EST
+      48 |     const result = formatTimestamp('2026-04-07T12:00:00.000Z');
+    > 49 |     expect(result).toBe('4/7/26');
+         |                    ^
+      50 |   });
+      51 | });
+      52 |
+
+      at Object.toBe (__tests__/jobs.test.ts:49:20)
+
+PASS __tests__/dashboardMetrics.test.ts
+PASS __tests__/profileService.test.ts
+PASS __tests__/jobActivityTimeline.test.ts
+PASS __tests__/JobDetailPanel.test.ts
+PASS __tests__/BoardControls.test.ts
+PASS __tests__/sample.test.ts
+PASS __tests__/deleteFlow.test.ts
+PASS __tests__/careerPreferences.test.ts
+PASS __tests__/PersonalInfoSection.test.tsx
+PASS __tests__/ProfessionalSummarySection.test.tsx
+FAIL __tests__/JobFormModal.test.tsx
+  ● Console
+
+    console.error
+      An update to JobForm inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      at node_modules/react-dom/cjs/react-dom-client.development.js:18758:19
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:874:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom-client.development.js:18757:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom-client.development.js:16409:11)
+      at dispatchSetStateInternal (node_modules/react-dom/cjs/react-dom-client.development.js:9170:13)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom-client.development.js:9127:7)
+      at Object.control [as callback] (node_modules/react-hook-form/src/useForm.ts:113:7)
+      at Object.name (node_modules/react-hook-form/src/logic/createFormControl.ts:1204:58)
+      at Object.next (node_modules/react-hook-form/src/utils/extractFormValues.ts:3:15)
+      at errors (node_modules/react-hook-form/src/logic/createFormControl.ts:1436:9)
+
+    console.error
+      An update to null inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      at node_modules/react-dom/cjs/react-dom-client.development.js:18758:19
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:874:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom-client.development.js:18757:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom-client.development.js:16409:11)
+      at dispatchSetStateInternal (node_modules/react-dom/cjs/react-dom-client.development.js:9170:13)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom-client.development.js:9127:7)
+      at refreshValue (node_modules/react-hook-form/src/useWatch.ts:334:7)
+      at Object.React [as callback] (node_modules/react-hook-form/src/useWatch.ts:361:26)
+      at Object.name (node_modules/react-hook-form/src/logic/createFormControl.ts:1204:58)
+      at Object.next (node_modules/react-hook-form/src/utils/extractFormValues.ts:3:15)
+      at errors (node_modules/react-hook-form/src/logic/createFormControl.ts:1436:9)
+
+  ● SCRUM-25 - JobForm › happy path: submits valid form data
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      Object {
+        "company": "Acme",
+        "deadline": "",
+    +   "deadlineTime": "08:00",
+        "location": "Remote",
+        "pipelineStage": "Interested",
+        "priorityFlag": false,
+        "title": "Frontend Engineer",
+      },
+
+    Number of calls: 1
+
+      38 |     });
+      39 |
+    > 40 |     expect(onSubmit).toHaveBeenCalledWith({
+         |                      ^
+      41 |       title: 'Frontend Engineer',
+      42 |       company: 'Acme',
+      43 |       location: 'Remote',
+
+      at Object.toHaveBeenCalledWith (__tests__/JobFormModal.test.tsx:40:22)
+
+Test Suites: 2 failed, 17 passed, 19 total
+Tests:       2 failed, 150 passed, 152 total
+Snapshots:   0 total
+Time:        3.95 s, estimated 4 s
+Ran all test suites.
