@@ -17,6 +17,7 @@ export type Job = {
   last_activity_date?: string;
   deadline?: string;
   is_priority?: boolean;
+  is_archived?: boolean;
   description?: string;
   compensation_notes?: string;
   application_date?: string;
