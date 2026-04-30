@@ -1,13 +1,13 @@
 'use client';
 
-// S2-025: Implement Dashboard Metrics (Stage Counts and Response Tracking)
-// Displays baseline metrics computed from stored job and outcome data.
-// Shows counts per pipeline stage plus response rate and interview rate.
+// StatsBar — S2-025 + S3-014.
+// S2-025: Stage counts, response rate, interview rate.
+// S3-014: Stage conversion funnel and average time-in-stage analytics
+//         computed from stored STAGE_CHANGE activity events.
 //
-// Response rate = jobs that received any employer response / total active jobs
-// Interview rate = jobs that reached interview or offer stage / total active jobs
 // Per S1-002 §4.2 — Stats Bar is a required dashboard layout zone.
-// Per S1-003 — data fetched from protected API route, never directly from DB.
+// Per S1-003 — all data fetched from protected API routes. Never calls
+//   Supabase directly. Never sends user_id from the client.
 
 import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
@@ -24,24 +24,40 @@ type StageCounts = {
   Archived: number;
 };
 
-// Metrics shape — stage counts plus computed response tracking metrics.
-// Per S2-025 — dashboard must display baseline metrics from stored job data.
+// Core metrics shape from S2-025.
 type DashboardMetrics = {
   counts: StageCounts;
-  // Response rate — percentage of active jobs that received any employer response.
-  // Calculated as: jobs with Interview/Offer/Rejected/Ghosted / total active jobs.
   responseRate: number;
-  // Interview rate — percentage of active jobs that reached interview or offer stage.
   interviewRate: number;
-  // Active jobs — total jobs excluding Archived and Interested.
-  // These are jobs that have been formally applied to.
   activeJobs: number;
 };
 
+// Conversion rate for one funnel step — e.g. Applied → Interview.
+type ConversionRate = {
+  from: string;
+  to: string;
+  reachedFrom: number;
+  reachedTo: number;
+  rate: number;
+};
+
+// Average days spent in a single stage before moving on.
+type AvgDaysInStage = {
+  stage: string;
+  avgDays: number;
+  sampleSize: number;
+};
+
+// S3-014 analytics shape returned by GET /api/analytics/dashboard.
+type AnalyticsData = {
+  conversionRates: ConversionRate[];
+  avgDaysInStage: AvgDaysInStage[];
+  totalJobsTracked: number;
+};
+
 interface StatsBarProps {
-  // refreshKey increments every time a job is added, updated, archived,
-  // or deleted — triggering the stats to re-fetch automatically.
-  // Per S2-025 — metrics must update from stored job data.
+  // Increments every time a job is added, updated, archived, or deleted —
+  // triggers a re-fetch of both metrics and analytics.
   refreshKey: number;
 }
 
@@ -62,20 +78,22 @@ export function StatsBar({ refreshKey }: StatsBarProps) {
     activeJobs: 0,
   });
 
-  // Re-fetch metrics whenever refreshKey changes.
-  // refreshKey is incremented by DashboardPage whenever a job action completes.
+  // S3-014: analytics state — null until first successful fetch.
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+
+  // Re-fetch both metrics and analytics whenever refreshKey changes.
+  // refreshKey is incremented by DashboardPage on any job mutation.
   useEffect(() => {
+    // Fetch S2-025 stage counts and response tracking metrics.
+    // Per S1-003 — auth and ownership enforced on the backend.
+    // user_id never sent from the client.
     async function fetchMetrics() {
       try {
-        // Fetch all jobs including archived so counts are accurate.
-        // Per S1-003 — auth and ownership enforced on the backend.
-        // We never pass user_id from the client.
         const res = await fetch('/api/jobs?all=true');
         if (!res.ok) return;
         const json = await res.json();
         const jobs = json.data ?? [];
 
-        // Build stage counts from the fetched job records.
         const newCounts: StageCounts = {
           Total: jobs.length,
           Interested: 0,
@@ -89,13 +107,10 @@ export function StatsBar({ refreshKey }: StatsBarProps) {
 
         for (const job of jobs) {
           const stage = job.current_stage as keyof StageCounts;
-          if (stage in newCounts) {
-            newCounts[stage]++;
-          }
+          if (stage in newCounts) newCounts[stage]++;
         }
 
-        // Calculate response tracking metrics — per S2-025 requirement.
-        // Active jobs = all jobs formally applied to (not Interested or Archived).
+        // Active jobs = formally applied (excludes Interested and Archived).
         const activeJobs =
           newCounts.Applied +
           newCounts.Interview +
@@ -103,13 +118,10 @@ export function StatsBar({ refreshKey }: StatsBarProps) {
           newCounts.Rejected +
           newCounts.Ghosted;
 
-        // Responded = jobs that received any employer response.
+        // Responded = jobs that got any employer response.
         const responded = newCounts.Interview + newCounts.Offer + newCounts.Rejected;
 
-        // Response rate = responded / active * 100, rounded to nearest integer.
         const responseRate = activeJobs > 0 ? Math.round((responded / activeJobs) * 100) : 0;
-
-        // Interview rate = jobs at interview or offer stage / active * 100.
         const interviewRate =
           activeJobs > 0
             ? Math.round(((newCounts.Interview + newCounts.Offer) / activeJobs) * 100)
@@ -120,14 +132,55 @@ export function StatsBar({ refreshKey }: StatsBarProps) {
         // Silently fail — metrics stay at previous values per S1-001 §6.3.
       }
     }
+
+    // S3-014: Fetch velocity and conversion analytics from the new endpoint.
+    // Per S1-003 §2.1 — the route verifies the session server-side.
+    // Per S1-003 §4.3 — ownership enforced via job ID join on the backend.
+    async function fetchAnalytics() {
+      try {
+        const res = await fetch('/api/analytics/dashboard');
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.data) setAnalytics(json.data);
+      } catch {
+        // Silently fail — analytics section simply won't render.
+      }
+    }
+
     fetchMetrics();
-  }, [refreshKey]); // re-runs whenever refreshKey changes
+    fetchAnalytics();
+  }, [refreshKey]);
+
+  // Colour helper for conversion rate badges.
+  // Green >= 50%, amber >= 25%, red below 25%.
+  function conversionColour(rate: number): string {
+    if (rate >= 50) return 'text-emerald-600';
+    if (rate >= 25) return 'text-amber-600';
+    return 'text-red-500';
+  }
+
+  // Colour helper for time-in-stage badges.
+  // Fast (< 7 days) = emerald, moderate (< 21 days) = amber, slow = red.
+  function velocityColour(days: number): string {
+    if (days < 7) return 'text-emerald-600';
+    if (days < 21) return 'text-amber-600';
+    return 'text-red-500';
+  }
+
+  // Whether analytics has enough data to be worth showing.
+  // Require at least 2 jobs tracked so single-job averages aren't misleading.
+  const hasAnalytics =
+    analytics !== null &&
+    analytics.totalJobsTracked >= 2 &&
+    (analytics.conversionRates.some((r) => r.reachedFrom > 0) ||
+      analytics.avgDaysInStage.length > 0);
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* STAGE COUNT CARDS — one card per pipeline stage plus total.
-          Per S1-002 §4.2 — Stats Bar is a required dashboard zone.
-          Per S1-002 §6.3 — stats bar uses flex row with equal-width blocks. */}
+    <div className="flex flex-col gap-6">
+      {/* ── STAGE COUNT CARDS (S2-025) ────────────────────────────────────
+          One card per pipeline stage plus total.
+          Per S1-002 §4.2 — Stats Bar is a required dashboard layout zone.
+          Per S1-002 §6.3 — uses flex row with equal-width blocks. */}
       <div className="flex flex-wrap gap-3">
         {(Object.entries(metrics.counts) as [keyof StageCounts, number][]).map(([label, count]) => (
           <Card
@@ -140,39 +193,37 @@ export function StatsBar({ refreshKey }: StatsBarProps) {
         ))}
       </div>
 
-      {/* RESPONSE TRACKING METRICS — S2-025 core addition.
-          Only shown when there are active jobs to avoid displaying
-          0% misleadingly for users who haven't applied yet. */}
+      {/* ── RESPONSE TRACKING METRICS (S2-025) ───────────────────────────
+          Only shown when there are active jobs — avoids showing 0%
+          misleadingly for users who haven't applied yet. */}
       {metrics.activeJobs > 0 && (
         <div className="flex flex-wrap gap-3">
-          {/* Response Rate — percentage of applications that received a response.
-              Green if >= 50%, amber if >= 25%, red if below 25%. */}
+          {/* Response Rate */}
           <Card className="flex min-w-[200px] flex-1 flex-col gap-1 border border-gray-200 bg-white p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-500">Response Rate</span>
               <span
-                className={
+                className={`text-sm font-bold ${
                   metrics.responseRate >= 50
-                    ? 'text-sm font-bold text-emerald-600'
+                    ? 'text-emerald-600'
                     : metrics.responseRate >= 25
-                      ? 'text-sm font-bold text-amber-600'
-                      : 'text-sm font-bold text-red-500'
-                }
+                      ? 'text-amber-600'
+                      : 'text-red-500'
+                }`}
               >
                 {metrics.responseRate}%
               </span>
             </div>
-            {/* Progress bar showing response rate visually.
-                Accessible via role and aria attributes per S1-002 §10.1. */}
+            {/* Progress bar — accessible via role and aria per S1-002 §10.1. */}
             <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-100">
               <div
-                className={
+                className={`h-full rounded-full transition-all duration-300 ${
                   metrics.responseRate >= 50
-                    ? 'h-full rounded-full bg-emerald-500 transition-all duration-300'
+                    ? 'bg-emerald-500'
                     : metrics.responseRate >= 25
-                      ? 'h-full rounded-full bg-amber-500 transition-all duration-300'
-                      : 'h-full rounded-full bg-red-400 transition-all duration-300'
-                }
+                      ? 'bg-amber-500'
+                      : 'bg-red-400'
+                }`}
                 style={{ width: `${metrics.responseRate}%` }}
                 role="progressbar"
                 aria-valuenow={metrics.responseRate}
@@ -187,7 +238,7 @@ export function StatsBar({ refreshKey }: StatsBarProps) {
             </p>
           </Card>
 
-          {/* Active Applications — jobs formally applied to */}
+          {/* Active Applications */}
           <Card className="flex min-w-[200px] flex-1 flex-col gap-1 border border-gray-200 bg-white p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-500">Active Applications</span>
@@ -198,7 +249,7 @@ export function StatsBar({ refreshKey }: StatsBarProps) {
             </p>
           </Card>
 
-          {/* Interview Rate — percentage of applications that reached interview stage */}
+          {/* Interview Rate */}
           <Card className="flex min-w-[200px] flex-1 flex-col gap-1 border border-gray-200 bg-white p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-500">Interview Rate</span>
@@ -209,6 +260,101 @@ export function StatsBar({ refreshKey }: StatsBarProps) {
               reached interview stage
             </p>
           </Card>
+        </div>
+      )}
+
+      {/* ── S3-014: STAGE CONVERSION FUNNEL ──────────────────────────────
+          Shows conversion rates between key funnel steps derived from
+          STAGE_CHANGE activity events. Only rendered when enough data
+          exists (>= 2 jobs tracked) to avoid misleading single-job stats. */}
+      {hasAnalytics && analytics!.conversionRates.some((r) => r.reachedFrom > 0) && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-700">Stage Conversion Funnel</h3>
+            <span className="text-xs text-gray-400">
+              based on {analytics!.totalJobsTracked} jobs
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {analytics!.conversionRates
+              // Only show funnel steps where at least one job reached the
+              // starting stage — skip empty steps entirely.
+              .filter((r) => r.reachedFrom > 0)
+              .map((r) => (
+                <Card
+                  key={`${r.from}-${r.to}`}
+                  className="flex min-w-[200px] flex-1 flex-col gap-2 border border-gray-200 bg-white p-4"
+                >
+                  {/* Funnel step label — "Applied → Interview" */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">
+                      {r.from} <span className="text-gray-400">→</span> {r.to}
+                    </span>
+                    <span className={`text-sm font-bold ${conversionColour(r.rate)}`}>
+                      {r.rate}%
+                    </span>
+                  </div>
+
+                  {/* Progress bar showing conversion rate visually. */}
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        r.rate >= 50
+                          ? 'bg-emerald-500'
+                          : r.rate >= 25
+                            ? 'bg-amber-500'
+                            : 'bg-red-400'
+                      }`}
+                      style={{ width: `${r.rate}%` }}
+                      role="progressbar"
+                      aria-valuenow={r.rate}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${r.from} to ${r.to} conversion: ${r.rate}%`}
+                    />
+                  </div>
+
+                  {/* Sample size — so the user knows how much data this is based on. */}
+                  <p className="text-xs text-gray-400">
+                    {r.reachedTo} of {r.reachedFrom} jobs converted
+                  </p>
+                </Card>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── S3-014: AVERAGE TIME IN STAGE ────────────────────────────────
+          Shows average days spent in each stage before moving on.
+          Computed from time deltas between consecutive STAGE_CHANGE events.
+          Colour-coded: green < 7 days, amber < 21 days, red >= 21 days.
+          Only shown when at least one stage has data. */}
+      {hasAnalytics && analytics!.avgDaysInStage.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-700">Average Time in Stage</h3>
+            <span className="text-xs text-gray-400">days before moving to next stage</span>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {analytics!.avgDaysInStage.map((s) => (
+              <Card
+                key={s.stage}
+                className="flex min-w-[140px] flex-1 flex-col items-center justify-center gap-1 border border-gray-200 bg-white p-4"
+              >
+                {/* Days count — large and prominent */}
+                <span className={`text-2xl font-bold ${velocityColour(s.avgDays)}`}>
+                  {s.avgDays}
+                </span>
+                <span className="text-xs font-medium text-gray-500">days in {s.stage}</span>
+                {/* Sample size helps the user gauge reliability of the average. */}
+                <span className="text-xs text-gray-400">
+                  avg of {s.sampleSize} job{s.sampleSize !== 1 ? 's' : ''}
+                </span>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>
