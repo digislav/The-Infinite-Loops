@@ -271,7 +271,7 @@ export function JobDetailPanel({
                     <Input
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="h-9 w-full max-w-xs text-xl font-bold"
+                      className="h-9 w-full text-xl font-bold"
                       placeholder="Job Title"
                     />
                   ) : (
@@ -401,7 +401,7 @@ export function JobDetailPanel({
                   <Input
                     value={company}
                     onChange={(e) => setCompany(e.target.value)}
-                    className="h-7 w-full text-sm sm:w-1/2"
+                    className="h-7 w-full text-sm"
                     placeholder="Company Name"
                   />
                 </div>
@@ -418,7 +418,7 @@ export function JobDetailPanel({
                   <Input
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="h-7 w-full text-sm sm:w-1/2"
+                    className="h-7 w-full text-sm"
                     placeholder="Location (e.g. Remote, NY)"
                   />
                 </div>
