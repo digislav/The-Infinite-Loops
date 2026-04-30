@@ -237,7 +237,7 @@ export function JobDetailPanel({
       <DialogContent
         className={cn(
           'max-h-[85vh] w-full overflow-y-auto',
-          activeDocumentTool ? 'sm:max-w-5xl' : 'sm:max-w-lg',
+          activeDocumentTool ? 'sm:max-w-6xl' : 'sm:max-w-4xl',
         )}
         aria-label="Job detail"
       >
@@ -271,7 +271,7 @@ export function JobDetailPanel({
                     <Input
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="h-9 w-full max-w-xs text-xl font-bold"
+                      className="h-9 min-w-0 flex-1 text-xl font-bold"
                       placeholder="Job Title"
                     />
                   ) : (
@@ -401,7 +401,7 @@ export function JobDetailPanel({
                   <Input
                     value={company}
                     onChange={(e) => setCompany(e.target.value)}
-                    className="h-7 w-full text-sm sm:w-1/2"
+                    className="h-7 min-w-0 flex-1 text-sm"
                     placeholder="Company Name"
                   />
                 </div>
@@ -418,7 +418,7 @@ export function JobDetailPanel({
                   <Input
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="h-7 w-full text-sm sm:w-1/2"
+                    className="h-7 min-w-0 flex-1 text-sm"
                     placeholder="Location (e.g. Remote, NY)"
                   />
                 </div>
