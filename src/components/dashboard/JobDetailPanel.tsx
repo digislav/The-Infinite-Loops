@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { formatDeadline, toLocalISOWithOffset, formatTimestamp } from '@/lib/utils/dateFormatters';
 import { getTodayDateInputValue, isDateInputBeforeToday } from '@/lib/utils/dateValidation';
 import type { JobDetail, PipelineStage } from '@/types/job.types';
+import { InterviewPrepNotes } from './InterviewPrepNotes';
 
 type DocumentTool = 'cover_letter' | 'resume' | null;
 
@@ -713,6 +714,14 @@ export function JobDetailPanel({
                 </div>
               )
             )}
+
+            <div className="mt-5 flex flex-col gap-3 border-b border-gray-100 pb-5">
+              <InterviewPrepNotes
+                jobId={job.id}
+                initialNotes={job.customNotes ?? ''}
+                onSaved={(updated) => onJobUpdated?.({ customNotes: updated })}
+              />
+            </div>
 
             <div className="mt-5 border-b border-gray-100 pb-5">
               <InterviewSection jobId={job.id} />
