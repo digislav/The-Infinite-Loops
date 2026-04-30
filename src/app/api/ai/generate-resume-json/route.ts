@@ -116,6 +116,7 @@ TARGET JOB DESCRIPTION:
 Title: ${job.job_title}
 Company: ${job.company_name}
 Description: ${job.description || ''}
+Company Research Notes: ${job.company_research_notes || ''}
 
 Remember: Return ONLY a raw JSON object string.
     `.trim();

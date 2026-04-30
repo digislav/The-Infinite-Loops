@@ -27,6 +27,7 @@ export interface JobRecord {
   application_date?: string;
   recruiter_notes?: string;
   custom_notes?: string;
+  company_research_notes?: string;
   recruiter_contact_notes?: string;
   outcome_notes?: string;
   created_at?: string;
@@ -58,6 +59,7 @@ export interface JobDetail extends Job {
   applicationDate?: string;
   recruiterNotes?: string;
   customNotes?: string;
+  companyResearchNotes?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -93,6 +95,7 @@ export function toUIJobDetail(record: JobRecord): JobDetail {
     applicationDate: record.application_date ?? undefined,
     recruiterNotes: record.recruiter_notes ?? undefined,
     customNotes: record.custom_notes ?? undefined,
+    companyResearchNotes: record.company_research_notes ?? undefined,
     createdAt: record.created_at ?? undefined,
     updatedAt: record.updated_at ?? undefined,
   };
