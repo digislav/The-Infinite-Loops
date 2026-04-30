@@ -6,7 +6,6 @@
 // This is a Server Component (no 'use client') — Next.js renders it server-side.
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 
 export default function NotFoundPage() {
   return (
@@ -19,9 +18,14 @@ export default function NotFoundPage() {
         </p>
       </div>
 
-      <Button asChild className="bg-[#2E75B6] text-white hover:bg-[#1F4E79]">
-        <Link href="/dashboard">Go to Dashboard</Link>
-      </Button>
+      {/* Use a plain styled link — avoids asChild prop incompatibility
+          with the current shadcn Button version per S1-002 §5.7. */}
+      <Link
+        href="/dashboard"
+        className="rounded-full bg-[#2E75B6] px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1F4E79]"
+      >
+        Go to Dashboard
+      </Link>
     </div>
   );
 }
