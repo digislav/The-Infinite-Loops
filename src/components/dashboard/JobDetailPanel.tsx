@@ -97,6 +97,7 @@ export function JobDetailPanel({
   const [compensationNotes, setCompensationNotes] = useState('');
   const [recruiterNotes, setRecruiterNotes] = useState('');
   const [customNotes, setCustomNotes] = useState('');
+  const [companyResearchNotes, setCompanyResearchNotes] = useState('');
   const [outcomeNotes, setOutcomeNotes] = useState('');
   const todayDate = getTodayDateInputValue();
 
@@ -130,6 +131,7 @@ export function JobDetailPanel({
       setCompensationNotes(job.compensationNotes ?? '');
       setRecruiterNotes(job.recruiterNotes ?? '');
       setCustomNotes(job.customNotes ?? '');
+      setCompanyResearchNotes(job.companyResearchNotes ?? '');
       setOutcomeNotes(job.outcomeNotes ?? '');
     }
     if (!isOpen) {
@@ -168,6 +170,7 @@ export function JobDetailPanel({
         compensation_notes: compensationNotes || undefined,
         recruiter_notes: recruiterNotes || undefined,
         custom_notes: customNotes || undefined,
+        company_research_notes: companyResearchNotes || undefined,
         outcome_notes: outcomeNotes || undefined,
       };
 
@@ -194,6 +197,7 @@ export function JobDetailPanel({
         compensationNotes,
         recruiterNotes,
         customNotes,
+        companyResearchNotes,
         outcomeNotes,
       });
 
@@ -539,6 +543,9 @@ export function JobDetailPanel({
                 <p className="text-sm text-gray-500">
                   Generate a tailored resume or cover letter directly from this job.
                 </p>
+                <p className="text-xs text-gray-400">
+                  Saved company research notes are included in AI prompt context for this job.
+                </p>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -663,6 +670,23 @@ export function JobDetailPanel({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="companyResearchNotes" className="text-xs text-gray-500">
+                    Company Research
+                  </Label>
+                  <p className="text-xs text-gray-400">
+                    Used to guide AI cover letter and resume generation with company-specific
+                    context.
+                  </p>
+                  <textarea
+                    id="companyResearchNotes"
+                    value={companyResearchNotes}
+                    onChange={(e) => setCompanyResearchNotes(e.target.value)}
+                    placeholder="Add company research, mission notes, product insights, or talking points for AI tailoring..."
+                    className="min-h-[100px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-[#2E75B6] focus:ring-2 focus:ring-[#2E75B6]/50 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
                   <Label htmlFor="customNotes" className="text-xs text-gray-500">
                     Custom Notes
                   </Label>
@@ -676,7 +700,7 @@ export function JobDetailPanel({
                 </div>
               </div>
             ) : (
-              (job.recruiterNotes || job.customNotes) && (
+              (job.recruiterNotes || job.companyResearchNotes || job.customNotes) && (
                 <div className="mt-5 flex flex-col gap-4 border-b border-gray-100 pb-5">
                   <h3 className="text-sm font-semibold text-gray-700">Notes</h3>
 
@@ -685,6 +709,15 @@ export function JobDetailPanel({
                       <span className="text-xs font-medium text-gray-500">Recruiter</span>
                       <p className="text-sm whitespace-pre-wrap text-gray-600">
                         {job.recruiterNotes}
+                      </p>
+                    </div>
+                  )}
+
+                  {job.companyResearchNotes && (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-medium text-gray-500">Company Research</span>
+                      <p className="text-sm whitespace-pre-wrap text-gray-600">
+                        {job.companyResearchNotes}
                       </p>
                     </div>
                   )}

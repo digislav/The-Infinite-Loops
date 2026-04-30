@@ -22,6 +22,7 @@ export type Job = {
   application_date?: string;
   recruiter_notes?: string;
   custom_notes?: string;
+  company_research_notes?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -143,6 +144,7 @@ export async function updateJob(id: string, userId: string, updates: Partial<Job
     updates.current_stage ||
     updates.recruiter_notes !== undefined ||
     updates.custom_notes !== undefined ||
+    updates.company_research_notes !== undefined ||
     updates.description !== undefined ||
     updates.compensation_notes !== undefined
   ) {
@@ -187,6 +189,7 @@ export async function updateJob(id: string, userId: string, updates: Partial<Job
     if (
       updates.recruiter_notes !== undefined ||
       updates.custom_notes !== undefined ||
+      updates.company_research_notes !== undefined ||
       updates.description !== undefined ||
       updates.compensation_notes !== undefined
     ) {

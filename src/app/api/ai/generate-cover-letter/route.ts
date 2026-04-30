@@ -94,6 +94,7 @@ Job Title: ${job.job_title}
 Company: ${job.company_name}
 Location: ${job.location ?? 'Not specified'}
 Description: ${job.description ?? 'Not provided'}
+Company Research Notes: ${job.company_research_notes ?? 'Not provided'}
 
 Remember: Return ONLY a raw JSON object string.
     `.trim();
