@@ -237,7 +237,7 @@ export function JobDetailPanel({
       <DialogContent
         className={cn(
           'max-h-[85vh] w-full overflow-y-auto',
-          activeDocumentTool ? 'sm:max-w-5xl' : 'sm:max-w-lg',
+          activeDocumentTool ? 'sm:max-w-6xl' : 'sm:max-w-3xl',
         )}
         aria-label="Job detail"
       >
