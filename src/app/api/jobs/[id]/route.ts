@@ -101,9 +101,6 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     // client sends. This prevents a user from overwriting another user's job.
     const { user_id: _stripped, ...safeBody } = body;
     const deadlineDate = getDateOnly(safeBody.deadline);
-    if (deadlineDate && isDateInputBeforeToday(deadlineDate)) {
-      return apiError('VALIDATION_ERROR', 400, { deadline: 'Deadline cannot be in the past.' });
-    }
 
     // updateJob includes .eq('user_id', user.id) in its query —
     // so even if the job ID exists, only the owner can update it.
