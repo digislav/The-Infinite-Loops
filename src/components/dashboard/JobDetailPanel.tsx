@@ -22,7 +22,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Flag, MapPin, Building2, CalendarClock, Pencil, Save } from 'lucide-react';
+import {
+  Flag,
+  MapPin,
+  Building2,
+  CalendarClock,
+  Pencil,
+  Save,
+  Sparkles,
+  Loader2,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDeadline, toLocalISOWithOffset, formatTimestamp } from '@/lib/utils/dateFormatters';
 import { getTodayDateInputValue, isDateInputBeforeToday } from '@/lib/utils/dateValidation';
@@ -87,6 +96,7 @@ export function JobDetailPanel({
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const [documentRefreshKey, setDocumentRefreshKey] = useState(0);
   const [activeDocumentTool, setActiveDocumentTool] = useState<DocumentTool>(null);
+  const [isGeneratingResearch, setIsGeneratingResearch] = useState(false);
 
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
@@ -149,10 +159,6 @@ export function JobDetailPanel({
 
   async function handleSave() {
     if (!job) return;
-    if (deadlineDateStr && isDateInputBeforeToday(deadlineDateStr)) {
-      setEditError('Deadline cannot be in the past.');
-      return;
-    }
 
     setIsSaving(true);
     setEditError(null);
@@ -226,6 +232,36 @@ export function JobDetailPanel({
 
   const deadlineSoon = isDeadlineSoon(job?.deadline);
   const deadlineOverdue = isDeadlineOverdue(job?.deadline);
+
+  async function handleGenerateResearch() {
+    if (!job) return;
+    setIsGeneratingResearch(true);
+    setEditError(null);
+    try {
+      const res = await fetch('/api/ai/generate-company-research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: job.id,
+          context: companyResearchNotes,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Generation failed');
+
+      const result = await res.json();
+      if (result.success && result.data?.research) {
+        setCompanyResearchNotes(result.data.research);
+      } else {
+        throw new Error(result.error?.message || 'Generation failed');
+      }
+    } catch (err) {
+      console.error(err);
+      setEditError('Failed to generate research. Please try again.');
+    } finally {
+      setIsGeneratingResearch(false);
+    }
+  }
 
   return (
     <Dialog
@@ -483,8 +519,8 @@ export function JobDetailPanel({
                       today.setHours(0, 0, 0, 0);
                       return selected < today;
                     })() && (
-                      <p className="animate-in fade-in slide-in-from-top-1 text-xs font-medium text-red-600">
-                        Deadline cannot be in the past.
+                      <p className="animate-in fade-in slide-in-from-top-1 text-xs font-medium text-amber-600">
+                        Note: Deadline is in the past.
                       </p>
                     )}
                   {editError && <p className="text-xs font-medium text-red-600">{editError}</p>}
@@ -686,19 +722,40 @@ export function JobDetailPanel({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="companyResearchNotes" className="text-xs text-gray-500">
-                    Company Research
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="companyResearchNotes" className="text-xs text-gray-500">
+                      Company Research
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="group relative h-6 gap-1 overflow-hidden px-2 text-xs transition-all duration-300 hover:border-[#2E75B6] hover:text-[#2E75B6] hover:shadow-[0_0_10px_rgba(46,117,182,0.2)]"
+                      onClick={handleGenerateResearch}
+                      disabled={isGeneratingResearch}
+                    >
+                      <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#2E75B6]/20 to-transparent transition-transform duration-700 ease-in-out group-hover:translate-x-full" />
+                      {isGeneratingResearch ? (
+                        <Loader2 className="relative z-10 h-3 w-3 animate-spin" />
+                      ) : (
+                        <Sparkles className="relative z-10 h-3 w-3 text-indigo-500 transition-transform duration-300 group-hover:scale-110 group-hover:animate-pulse group-hover:text-[#2E75B6]" />
+                      )}
+                      <span className="relative z-10">
+                        {isGeneratingResearch ? 'Generating...' : 'Generate with AI'}
+                      </span>
+                    </Button>
+                  </div>
                   <p className="text-xs text-gray-400">
-                    Used to guide AI cover letter and resume generation with company-specific
-                    context.
+                    Type instructions and hit Generate to research the company, or write your own
+                    notes. This context deeply tailors your generated resumes and cover letters.
                   </p>
                   <textarea
                     id="companyResearchNotes"
                     value={companyResearchNotes}
                     onChange={(e) => setCompanyResearchNotes(e.target.value)}
                     placeholder="Add company research, mission notes, product insights, or talking points for AI tailoring..."
-                    className="min-h-[100px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-[#2E75B6] focus:ring-2 focus:ring-[#2E75B6]/50 focus:outline-none"
+                    disabled={isGeneratingResearch}
+                    className="min-h-[100px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-[#2E75B6] focus:ring-2 focus:ring-[#2E75B6]/50 focus:outline-none disabled:opacity-50"
                   />
                 </div>
 
