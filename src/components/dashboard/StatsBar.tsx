@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
+import { ChevronDown, ChevronUp, BarChart2 } from 'lucide-react';
 
 // Stage counts shape — one entry per pipeline stage plus total.
 type StageCounts = {
@@ -80,6 +81,9 @@ export function StatsBar({ refreshKey }: StatsBarProps) {
 
   // S3-014: analytics state — null until first successful fetch.
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+
+  // UI state to toggle the visibility of detailed statistics
+  const [isStatsExpanded, setIsStatsExpanded] = useState(false);
 
   // Re-fetch both metrics and analytics whenever refreshKey changes.
   // refreshKey is incremented by DashboardPage on any job mutation.
@@ -193,170 +197,194 @@ export function StatsBar({ refreshKey }: StatsBarProps) {
         ))}
       </div>
 
-      {/* ── RESPONSE TRACKING METRICS (S2-025) ───────────────────────────
-          Only shown when there are active jobs — avoids showing 0%
-          misleadingly for users who haven't applied yet. */}
-      {metrics.activeJobs > 0 && (
-        <div className="flex flex-wrap gap-3">
-          {/* Response Rate */}
-          <Card className="flex min-w-[200px] flex-1 flex-col gap-1 border border-gray-200 bg-white p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500">Response Rate</span>
-              <span
-                className={`text-sm font-bold ${
-                  metrics.responseRate >= 50
-                    ? 'text-emerald-600'
-                    : metrics.responseRate >= 25
-                      ? 'text-amber-600'
-                      : 'text-red-500'
-                }`}
-              >
-                {metrics.responseRate}%
-              </span>
-            </div>
-            {/* Progress bar — accessible via role and aria per S1-002 §10.1. */}
-            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-100">
-              <div
-                className={`h-full rounded-full transition-all duration-300 ${
-                  metrics.responseRate >= 50
-                    ? 'bg-emerald-500'
-                    : metrics.responseRate >= 25
-                      ? 'bg-amber-500'
-                      : 'bg-red-400'
-                }`}
-                style={{ width: `${metrics.responseRate}%` }}
-                role="progressbar"
-                aria-valuenow={metrics.responseRate}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`Response rate: ${metrics.responseRate}%`}
-              />
-            </div>
-            <p className="mt-1 text-xs text-gray-400">
-              {metrics.counts.Interview + metrics.counts.Offer + metrics.counts.Rejected} of{' '}
-              {metrics.activeJobs} applications received a response
-            </p>
-          </Card>
-
-          {/* Active Applications */}
-          <Card className="flex min-w-[200px] flex-1 flex-col gap-1 border border-gray-200 bg-white p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500">Active Applications</span>
-              <span className="text-sm font-bold text-gray-900">{metrics.activeJobs}</span>
-            </div>
-            <p className="mt-1 text-xs text-gray-400">
-              Jobs formally applied to (excluding Interested &amp; Archived)
-            </p>
-          </Card>
-
-          {/* Interview Rate */}
-          <Card className="flex min-w-[200px] flex-1 flex-col gap-1 border border-gray-200 bg-white p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500">Interview Rate</span>
-              <span className="text-sm font-bold text-amber-600">{metrics.interviewRate}%</span>
-            </div>
-            <p className="mt-1 text-xs text-gray-400">
-              {metrics.counts.Interview + metrics.counts.Offer} of {metrics.activeJobs} applications
-              reached interview stage
-            </p>
-          </Card>
+      <div className="flex flex-col gap-4">
+        <div className="relative flex items-center">
+          <button
+            onClick={() => setIsStatsExpanded(!isStatsExpanded)}
+            className="mr-4 flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1.5 pr-4 pl-3 text-xs font-semibold text-gray-600 shadow-sm transition-all hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-gray-200 focus:outline-none"
+          >
+            <BarChart2 className="h-3.5 w-3.5 text-gray-400" />
+            {isStatsExpanded ? 'Hide Analytics' : 'Show Detailed Analytics'}
+            {isStatsExpanded ? (
+              <ChevronUp className="h-3.5 w-3.5 text-gray-400" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+            )}
+          </button>
+          <div className="flex-grow border-t border-gray-200"></div>
         </div>
-      )}
 
-      {/* ── S3-014: STAGE CONVERSION FUNNEL ──────────────────────────────
-          Shows conversion rates between key funnel steps derived from
-          STAGE_CHANGE activity events. Only rendered when enough data
-          exists (>= 2 jobs tracked) to avoid misleading single-job stats. */}
-      {hasAnalytics && analytics!.conversionRates.some((r) => r.reachedFrom > 0) && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-gray-700">Stage Conversion Funnel</h3>
-            <span className="text-xs text-gray-400">
-              based on {analytics!.totalJobsTracked} jobs
-            </span>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            {analytics!.conversionRates
-              // Only show funnel steps where at least one job reached the
-              // starting stage — skip empty steps entirely.
-              .filter((r) => r.reachedFrom > 0)
-              .map((r) => (
-                <Card
-                  key={`${r.from}-${r.to}`}
-                  className="flex min-w-[200px] flex-1 flex-col gap-2 border border-gray-200 bg-white p-4"
-                >
-                  {/* Funnel step label — "Applied → Interview" */}
+        {isStatsExpanded && (
+          <div className="animate-in fade-in slide-in-from-top-2 flex flex-col gap-6 duration-300">
+            {/* ── RESPONSE TRACKING METRICS (S2-025) ───────────────────────────
+                Only shown when there are active jobs — avoids showing 0%
+                misleadingly for users who haven't applied yet. */}
+            {metrics.activeJobs > 0 && (
+              <div className="flex flex-wrap gap-3">
+                {/* Response Rate */}
+                <Card className="flex min-w-[200px] flex-1 flex-col gap-1 border border-gray-200 bg-white p-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">
-                      {r.from} <span className="text-gray-400">→</span> {r.to}
-                    </span>
-                    <span className={`text-sm font-bold ${conversionColour(r.rate)}`}>
-                      {r.rate}%
+                    <span className="text-sm font-medium text-gray-500">Response Rate</span>
+                    <span
+                      className={`text-sm font-bold ${
+                        metrics.responseRate >= 50
+                          ? 'text-emerald-600'
+                          : metrics.responseRate >= 25
+                            ? 'text-amber-600'
+                            : 'text-red-500'
+                      }`}
+                    >
+                      {metrics.responseRate}%
                     </span>
                   </div>
-
-                  {/* Progress bar showing conversion rate visually. */}
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                  {/* Progress bar — accessible via role and aria per S1-002 §10.1. */}
+                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-100">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
-                        r.rate >= 50
+                        metrics.responseRate >= 50
                           ? 'bg-emerald-500'
-                          : r.rate >= 25
+                          : metrics.responseRate >= 25
                             ? 'bg-amber-500'
                             : 'bg-red-400'
                       }`}
-                      style={{ width: `${r.rate}%` }}
+                      style={{ width: `${metrics.responseRate}%` }}
                       role="progressbar"
-                      aria-valuenow={r.rate}
+                      aria-valuenow={metrics.responseRate}
                       aria-valuemin={0}
                       aria-valuemax={100}
-                      aria-label={`${r.from} to ${r.to} conversion: ${r.rate}%`}
+                      aria-label={`Response rate: ${metrics.responseRate}%`}
                     />
                   </div>
-
-                  {/* Sample size — so the user knows how much data this is based on. */}
-                  <p className="text-xs text-gray-400">
-                    {r.reachedTo} of {r.reachedFrom} jobs converted
+                  <p className="mt-1 text-xs text-gray-400">
+                    {metrics.counts.Interview + metrics.counts.Offer + metrics.counts.Rejected} of{' '}
+                    {metrics.activeJobs} applications received a response
                   </p>
                 </Card>
-              ))}
-          </div>
-        </div>
-      )}
 
-      {/* ── S3-014: AVERAGE TIME IN STAGE ────────────────────────────────
+                {/* Active Applications */}
+                <Card className="flex min-w-[200px] flex-1 flex-col gap-1 border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-500">Active Applications</span>
+                    <span className="text-sm font-bold text-gray-900">{metrics.activeJobs}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Jobs formally applied to (excluding Interested &amp; Archived)
+                  </p>
+                </Card>
+
+                {/* Interview Rate */}
+                <Card className="flex min-w-[200px] flex-1 flex-col gap-1 border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-500">Interview Rate</span>
+                    <span className="text-sm font-bold text-amber-600">
+                      {metrics.interviewRate}%
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {metrics.counts.Interview + metrics.counts.Offer} of {metrics.activeJobs}{' '}
+                    applications reached interview stage
+                  </p>
+                </Card>
+              </div>
+            )}
+
+            {/* ── S3-014: STAGE CONVERSION FUNNEL ──────────────────────────────
+          Shows conversion rates between key funnel steps derived from
+          STAGE_CHANGE activity events. Only rendered when enough data
+          exists (>= 2 jobs tracked) to avoid misleading single-job stats. */}
+            {hasAnalytics && analytics!.conversionRates.some((r) => r.reachedFrom > 0) && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-gray-700">Stage Conversion Funnel</h3>
+                  <span className="text-xs text-gray-400">
+                    based on {analytics!.totalJobsTracked} jobs
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  {analytics!.conversionRates
+                    // Only show funnel steps where at least one job reached the
+                    // starting stage — skip empty steps entirely.
+                    .filter((r) => r.reachedFrom > 0)
+                    .map((r) => (
+                      <Card
+                        key={`${r.from}-${r.to}`}
+                        className="flex min-w-[200px] flex-1 flex-col gap-2 border border-gray-200 bg-white p-4"
+                      >
+                        {/* Funnel step label — "Applied → Interview" */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-600">
+                            {r.from} <span className="text-gray-400">→</span> {r.to}
+                          </span>
+                          <span className={`text-sm font-bold ${conversionColour(r.rate)}`}>
+                            {r.rate}%
+                          </span>
+                        </div>
+
+                        {/* Progress bar showing conversion rate visually. */}
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              r.rate >= 50
+                                ? 'bg-emerald-500'
+                                : r.rate >= 25
+                                  ? 'bg-amber-500'
+                                  : 'bg-red-400'
+                            }`}
+                            style={{ width: `${r.rate}%` }}
+                            role="progressbar"
+                            aria-valuenow={r.rate}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`${r.from} to ${r.to} conversion: ${r.rate}%`}
+                          />
+                        </div>
+
+                        {/* Sample size — so the user knows how much data this is based on. */}
+                        <p className="text-xs text-gray-400">
+                          {r.reachedTo} of {r.reachedFrom} jobs converted
+                        </p>
+                      </Card>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── S3-014: AVERAGE TIME IN STAGE ────────────────────────────────
           Shows average days spent in each stage before moving on.
           Computed from time deltas between consecutive STAGE_CHANGE events.
           Colour-coded: green < 7 days, amber < 21 days, red >= 21 days.
           Only shown when at least one stage has data. */}
-      {hasAnalytics && analytics!.avgDaysInStage.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-gray-700">Average Time in Stage</h3>
-            <span className="text-xs text-gray-400">days before moving to next stage</span>
-          </div>
+            {hasAnalytics && analytics!.avgDaysInStage.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-gray-700">Average Time in Stage</h3>
+                  <span className="text-xs text-gray-400">days before moving to next stage</span>
+                </div>
 
-          <div className="flex flex-wrap gap-3">
-            {analytics!.avgDaysInStage.map((s) => (
-              <Card
-                key={s.stage}
-                className="flex min-w-[140px] flex-1 flex-col items-center justify-center gap-1 border border-gray-200 bg-white p-4"
-              >
-                {/* Days count — large and prominent */}
-                <span className={`text-2xl font-bold ${velocityColour(s.avgDays)}`}>
-                  {s.avgDays}
-                </span>
-                <span className="text-xs font-medium text-gray-500">days in {s.stage}</span>
-                {/* Sample size helps the user gauge reliability of the average. */}
-                <span className="text-xs text-gray-400">
-                  avg of {s.sampleSize} job{s.sampleSize !== 1 ? 's' : ''}
-                </span>
-              </Card>
-            ))}
+                <div className="flex flex-wrap gap-3">
+                  {analytics!.avgDaysInStage.map((s) => (
+                    <Card
+                      key={s.stage}
+                      className="flex min-w-[140px] flex-1 flex-col items-center justify-center gap-1 border border-gray-200 bg-white p-4"
+                    >
+                      {/* Days count — large and prominent */}
+                      <span className={`text-2xl font-bold ${velocityColour(s.avgDays)}`}>
+                        {s.avgDays}
+                      </span>
+                      <span className="text-xs font-medium text-gray-500">days in {s.stage}</span>
+                      {/* Sample size helps the user gauge reliability of the average. */}
+                      <span className="text-xs text-gray-400">
+                        avg of {s.sampleSize} job{s.sampleSize !== 1 ? 's' : ''}
+                      </span>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
