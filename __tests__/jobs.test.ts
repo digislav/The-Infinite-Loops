@@ -123,7 +123,7 @@ describe('jobFormSchema', () => {
     company: 'Meta',
     location: 'Remote',
     pipelineStage: 'Interested' as const,
-    deadline: '2026-05-01',
+    deadline: '2030-05-01',
     priorityFlag: false,
   };
 
