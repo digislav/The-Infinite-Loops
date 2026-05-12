@@ -1,5 +1,16 @@
 'use client';
 
+// ResumeGenerator — S2-021 + S2-023 + S2-024 + S3-003.
+// S2-021: Generates a tailored resume using profile data and a selected job.
+// S2-023: Adds rewrite/improve actions to refine the draft.
+// S2-024: Adds save functionality to persist generated resumes.
+// S3-003: existingDocId prop — when set, saving adds a new version to
+// the existing document instead of creating a new one.
+//
+// Per S1-004 — AI-generated content is clearly labelled as a draft.
+// Per S1-003 — auth and ownership enforced on the backend.
+//   We never send profile data from the client — only jobId.
+
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -74,7 +85,7 @@ const PRESET_INSTRUCTIONS = [
   { label: 'Custom instruction...', value: 'custom' },
 ];
 
-interface CoverLetterGeneratorProps {
+interface ResumeGeneratorProps {
   // S2-024: Called after a successful save so the parent can refresh
   // the saved documents list.
   onSaved?: () => void;
@@ -85,12 +96,12 @@ interface CoverLetterGeneratorProps {
   existingDocId?: string;
 }
 
-export function CoverLetterGenerator({
+export function ResumeGenerator({
   onSaved,
   presetJob,
   hideJobSelector = false,
   existingDocId,
-}: CoverLetterGeneratorProps) {
+}: ResumeGeneratorProps) {
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [jobsLoading, setJobsLoading] = useState(!presetJob);
   const [selectedJobId, setSelectedJobId] = useState(presetJob?.id ?? '');
@@ -248,9 +259,7 @@ export function CoverLetterGenerator({
 
     try {
       const job = selectedJob;
-      const title = job
-        ? `Cover Letter — ${job.job_title} at ${job.company_name}`
-        : 'Cover Letter Draft';
+      const title = job ? `Resume — ${job.job_title} at ${job.company_name}` : 'Resume Draft';
 
       let res: Response;
 
@@ -269,7 +278,7 @@ export function CoverLetterGenerator({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             job_id: selectedJobId,
-            type: 'cover_letter',
+            type: 'resume',
             name: title,
             content: JSON.stringify(draft),
           }),
@@ -292,6 +301,7 @@ export function CoverLetterGenerator({
 
   // handleSaveAsNew — S3-003: always creates a new document even when
   // existingDocId is set. Gives the user the choice to version or branch.
+  // user_id always comes from the session server-side per S1-003 §5.4.
   async function handleSaveAsNew() {
     if (!draft || !selectedJobId) return;
 
@@ -300,16 +310,14 @@ export function CoverLetterGenerator({
 
     try {
       const job = selectedJob;
-      const title = job
-        ? `Cover Letter — ${job.job_title} at ${job.company_name}`
-        : 'Cover Letter Draft';
+      const title = job ? `Resume — ${job.job_title} at ${job.company_name}` : 'Resume Draft';
 
       const res = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           job_id: selectedJobId,
-          type: 'cover_letter',
+          type: 'resume',
           name: title,
           content: JSON.stringify(draft),
         }),
@@ -408,7 +416,7 @@ export function CoverLetterGenerator({
         </div>
       )}
 
-      {/* DRAFT OUTPUT - The actual HTML Template Canvas */}
+      {/* DRAFT OUTPUT */}
       {draft && !isGenerating && (
         <div className="mt-4 flex flex-col gap-4 print:mt-0">
           {/* Templating Controls & Actions */}
@@ -430,7 +438,8 @@ export function CoverLetterGenerator({
             </div>
 
             <div className="flex items-center gap-3">
-              {/* S2-024 + S3-003: Save buttons */}
+              {/* S2-024 + S3-003: Save buttons — when existingDocId is set
+                  show both options so user can choose to version or create new. */}
               {existingDocId ? (
                 <>
                   <Button
@@ -656,13 +665,6 @@ export function CoverLetterGenerator({
             {isRewriting && <p className="text-xs text-gray-400">Refining your resume...</p>}
           </div>
 
-          {/* 
-            THE RESUME CANVAS 
-            This is the raw physical A4 rendering bounding box. 
-            Notice how we do NOT use Shadcn Card or ScrollArea components here, 
-            which ensures it translates cleanly without DOM hydration bugs when passed to window.print() 
-          */}
-
           <div
             id="resume-print-canvas"
             className="min-h-[800px] w-full border border-gray-300 bg-white p-8 text-gray-900 shadow-sm print:w-full print:border-none print:shadow-none"
@@ -670,19 +672,12 @@ export function CoverLetterGenerator({
             {/* Template 1: Classic (Traditional 1-column layout) */}
             {template === 'classic' && (
               <div className="mx-auto flex max-w-3xl flex-col gap-6">
-                {/* 
-                  HEADER SECTION:
-                  Maps the base "name", "headline", and "location" keys straight from the generated JSON 
-                  into heavily structured typography tags.
-                */}
                 <div className="border-b-2 border-gray-900 pb-4 text-center">
                   <h1 className="font-serif text-3xl font-bold tracking-wide uppercase">
                     {draft.name}
                   </h1>
                   <p className="mt-1 text-sm font-medium">{draft.headline}</p>
                   <p className="mt-0.5 text-xs text-gray-600">{draft.location}</p>
-
-                  {/* Safely extracts dynamic link blocks directly generated by the AI without crashing if null */}
                   {draft.links &&
                     (draft.links.linkedin || draft.links.github || draft.links.portfolio) && (
                       <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs font-semibold text-[#2E75B6]">
@@ -720,10 +715,6 @@ export function CoverLetterGenerator({
                     )}
                 </div>
 
-                {/* 
-                  SUMMARY SECTION:
-                  Directly injects the massive summarized string into a standard text paragraph tag.
-                */}
                 <div>
                   <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
                     Professional Summary
@@ -731,11 +722,6 @@ export function CoverLetterGenerator({
                   <p className="text-sm leading-relaxed">{draft.summary}</p>
                 </div>
 
-                {/* 
-                  EXPERIENCE SECTION:
-                  Uses a standard React `.map()` array iterator to loop through the "experiences" JSON array.
-                  This dynamically stamps out HTML blocks mapping each array entry to specific DOM nodes natively.
-                */}
                 <div>
                   <h2 className="mb-2 border-b border-gray-300 pb-1 text-sm font-bold tracking-wider uppercase">
                     Experience
@@ -743,14 +729,11 @@ export function CoverLetterGenerator({
                   <div className="flex flex-col gap-4">
                     {draft.experiences?.map((exp, i) => (
                       <div key={i}>
-                        {/* The Role header dynamically mapped from exp.role */}
                         <div className="flex items-baseline justify-between">
                           <h3 className="text-sm font-bold">{exp.role}</h3>
                           <span className="text-xs font-semibold">{exp.dateRange}</span>
                         </div>
                         <div className="mb-1.5 text-sm italic">{exp.company}</div>
-
-                        {/* Nested Loop: Generates Native <li> bullet points for each mapped AI string */}
                         <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
                           {exp.bullets?.map((bull, j) => (
                             <li key={j}>{bull}</li>
