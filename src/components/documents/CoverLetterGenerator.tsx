@@ -345,7 +345,7 @@ export function CoverLetterGenerator({
         </div>
       )}
 
-      {hideJobSelector && selectedJob && (
+      {hideJobSelector && selectedJob && selectedJob.job_title && (
         <div className="rounded-md border border-blue-100 bg-blue-50/60 px-4 py-3 print:hidden">
           <p className="text-sm font-medium text-blue-900">
             Generating for {selectedJob.job_title} at {selectedJob.company_name}
