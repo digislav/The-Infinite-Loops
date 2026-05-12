@@ -759,18 +759,20 @@ export function JobDetailPanel({
                   />
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="customNotes" className="text-xs text-gray-500">
-                    Custom Notes
-                  </Label>
-                  <textarea
-                    id="customNotes"
-                    value={customNotes}
-                    onChange={(e) => setCustomNotes(e.target.value)}
-                    placeholder="Enter any additional context or private notes..."
-                    className="min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-[#2E75B6] focus:ring-2 focus:ring-[#2E75B6]/50 focus:outline-none"
-                  />
-                </div>
+                {!customNotes.startsWith('{') && (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="customNotes" className="text-xs text-gray-500">
+                      Custom Notes
+                    </Label>
+                    <textarea
+                      id="customNotes"
+                      value={customNotes}
+                      onChange={(e) => setCustomNotes(e.target.value)}
+                      placeholder="Enter any additional context or private notes..."
+                      className="min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-[#2E75B6] focus:ring-2 focus:ring-[#2E75B6]/50 focus:outline-none"
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               (job.recruiterNotes || job.companyResearchNotes || job.customNotes) && (
@@ -795,7 +797,7 @@ export function JobDetailPanel({
                     </div>
                   )}
 
-                  {job.customNotes && (
+                  {job.customNotes && !job.customNotes.startsWith('{') && (
                     <div className="flex flex-col gap-1">
                       <span className="text-xs font-medium text-gray-500">Custom Notes</span>
                       <p className="text-sm whitespace-pre-wrap text-gray-600">{job.customNotes}</p>
