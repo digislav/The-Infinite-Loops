@@ -83,12 +83,16 @@ interface CoverLetterGeneratorProps {
   onSaved?: () => void;
   presetJob?: JobOption;
   hideJobSelector?: boolean;
+  // S3-003: When provided, saving adds a new version to this document
+  // instead of creating a new one. Used by SavedDocuments rewrite flow.
+  existingDocId?: string;
 }
 
 export function CoverLetterGenerator({
   onSaved,
   presetJob,
   hideJobSelector = false,
+  existingDocId,
 }: CoverLetterGeneratorProps) {
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [jobsLoading, setJobsLoading] = useState(!presetJob);
@@ -255,10 +259,64 @@ export function CoverLetterGenerator({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  // handleSave — S2-024: saves the current draft as a document record.
-  // Only job_id, type, name, and content are sent — user_id comes from
-  // the session server-side per S1-003 §5.4.
+  // handleSave — S2-024 + S3-003.
+  // If existingDocId is provided, saves as a new version of that document
+  // via POST /api/documents/:id/versions — per S3-003 versioning flow.
+  // Otherwise creates a new document via POST /api/documents.
+  // user_id always comes from the session server-side per S1-003 §5.4.
   async function handleSave() {
+    if (!draft || !selectedJobId) return;
+
+    setIsSaving(true);
+    setSaveStatus('idle');
+
+    try {
+      const job = selectedJob;
+      const title = job
+        ? `Cover Letter — ${job.job_title} at ${job.company_name}`
+        : 'Cover Letter Draft';
+
+      let res: Response;
+
+      if (existingDocId) {
+        // S3-003: Save as a new version of the existing document.
+        // Never sends user_id — ownership enforced server-side per S1-003 §5.4.
+        res = await fetch(`/api/documents/${existingDocId}/versions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: JSON.stringify(draft) }),
+        });
+      } else {
+        // Default: create a brand new document.
+        res = await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            job_id: selectedJobId,
+            type: 'cover_letter',
+            name: title,
+            content: JSON.stringify(draft),
+          }),
+        });
+      }
+
+      if (!res.ok) {
+        setSaveStatus('error');
+        return;
+      }
+
+      setSaveStatus('success');
+      if (onSaved) onSaved();
+    } catch {
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  // handleSaveAsNew — S3-003: always creates a new document even when
+  // existingDocId is set. Gives the user the choice to version or branch.
+  async function handleSaveAsNew() {
     if (!draft || !selectedJobId) return;
 
     setIsSaving(true);
@@ -273,8 +331,6 @@ export function CoverLetterGenerator({
       const res = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Only send job_id, type, name, content — never user_id per S1-003 §5.4.
-        // Using 'name' to match the documents table column name.
         body: JSON.stringify({
           job_id: selectedJobId,
           type: 'cover_letter',
@@ -287,9 +343,7 @@ export function CoverLetterGenerator({
         setSaveStatus('error');
         return;
       }
-
       setSaveStatus('success');
-      // Notify parent to refresh the saved documents list.
       if (onSaved) onSaved();
     } catch {
       setSaveStatus('error');
@@ -345,7 +399,7 @@ export function CoverLetterGenerator({
         </div>
       )}
 
-      {hideJobSelector && selectedJob && (
+      {hideJobSelector && selectedJob && selectedJob.job_title && (
         <div className="rounded-md border border-blue-100 bg-blue-50/60 px-4 py-3 print:hidden">
           <p className="text-sm font-medium text-blue-900">
             Generating for {selectedJob.job_title} at {selectedJob.company_name}
@@ -382,7 +436,7 @@ export function CoverLetterGenerator({
       )}
 
       {/* DRAFT OUTPUT — shown after successful generation.
-          Per S1-004 — clearly labelled as an AI-generated draft. */}
+	      Per S1-004 — clearly labelled as an AI-generated draft. */}
       {draft && !isGenerating && (
         <div className="mt-4 flex flex-col gap-4 print:mt-0">
           <div className="flex flex-col justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 p-4 sm:flex-row sm:items-center print:hidden">
@@ -403,21 +457,57 @@ export function CoverLetterGenerator({
                 {copied ? '✓ Copied!' : 'Copy Text'}
               </Button>
               {/* S2-024: Save Draft button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="h-9 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
-              >
-                {isSaving
-                  ? 'Saving...'
-                  : saveStatus === 'success'
-                    ? '✓ Saved!'
-                    : saveStatus === 'error'
-                      ? 'Save Failed'
-                      : 'Save Draft'}
-              </Button>
+              {/* S2-024 + S3-003: Save buttons */}
+              {existingDocId ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="h-9 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+                  >
+                    {isSaving
+                      ? 'Saving...'
+                      : saveStatus === 'success'
+                        ? '✓ Version Saved!'
+                        : saveStatus === 'error'
+                          ? 'Save Failed'
+                          : 'Save as New Version'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSaveAsNew}
+                    disabled={isSaving}
+                    className="h-9 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+                  >
+                    {isSaving
+                      ? 'Saving...'
+                      : saveStatus === 'success'
+                        ? '✓ Saved!'
+                        : saveStatus === 'error'
+                          ? 'Save Failed'
+                          : 'Save as New Document'}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="h-9 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+                >
+                  {isSaving
+                    ? 'Saving...'
+                    : saveStatus === 'success'
+                      ? '✓ Saved!'
+                      : saveStatus === 'error'
+                        ? 'Save Failed'
+                        : 'Save to Documents'}
+                </Button>
+              )}
               <Button onClick={handlePrint} className="bg-black text-white hover:bg-gray-800">
                 Print / Save as PDF
               </Button>
