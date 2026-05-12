@@ -74,19 +74,23 @@ const PRESET_INSTRUCTIONS = [
   { label: 'Custom instruction...', value: 'custom' },
 ];
 
-interface ResumeGeneratorProps {
+interface CoverLetterGeneratorProps {
   // S2-024: Called after a successful save so the parent can refresh
   // the saved documents list.
   onSaved?: () => void;
   presetJob?: JobOption;
   hideJobSelector?: boolean;
+  // S3-003: When provided, saving adds a new version to this document
+  // instead of creating a new one. Used by SavedDocuments rewrite flow.
+  existingDocId?: string;
 }
 
-export function ResumeGenerator({
+export function CoverLetterGenerator({
   onSaved,
   presetJob,
   hideJobSelector = false,
-}: ResumeGeneratorProps) {
+  existingDocId,
+}: CoverLetterGeneratorProps) {
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [jobsLoading, setJobsLoading] = useState(!presetJob);
   const [selectedJobId, setSelectedJobId] = useState(presetJob?.id ?? '');
@@ -231,9 +235,11 @@ export function ResumeGenerator({
     }
   }
 
-  // handleSave — S2-024: saves the current resume draft as a document record.
-  // Only job_id, type, name, and content are sent — user_id comes from
-  // the session server-side per S1-003 §5.4.
+  // handleSave — S2-024 + S3-003.
+  // If existingDocId is provided, saves as a new version of that document
+  // via POST /api/documents/:id/versions — per S3-003 versioning flow.
+  // Otherwise creates a new document via POST /api/documents.
+  // user_id always comes from the session server-side per S1-003 §5.4.
   async function handleSave() {
     if (!draft || !selectedJobId) return;
 
@@ -242,16 +248,68 @@ export function ResumeGenerator({
 
     try {
       const job = selectedJob;
-      const title = job ? `Resume — ${job.job_title} at ${job.company_name}` : 'Resume Draft';
+      const title = job
+        ? `Cover Letter — ${job.job_title} at ${job.company_name}`
+        : 'Cover Letter Draft';
+
+      let res: Response;
+
+      if (existingDocId) {
+        // S3-003: Save as a new version of the existing document.
+        // Never sends user_id — ownership enforced server-side per S1-003 §5.4.
+        res = await fetch(`/api/documents/${existingDocId}/versions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: JSON.stringify(draft) }),
+        });
+      } else {
+        // Default: create a brand new document.
+        res = await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            job_id: selectedJobId,
+            type: 'cover_letter',
+            name: title,
+            content: JSON.stringify(draft),
+          }),
+        });
+      }
+
+      if (!res.ok) {
+        setSaveStatus('error');
+        return;
+      }
+
+      setSaveStatus('success');
+      if (onSaved) onSaved();
+    } catch {
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  // handleSaveAsNew — S3-003: always creates a new document even when
+  // existingDocId is set. Gives the user the choice to version or branch.
+  async function handleSaveAsNew() {
+    if (!draft || !selectedJobId) return;
+
+    setIsSaving(true);
+    setSaveStatus('idle');
+
+    try {
+      const job = selectedJob;
+      const title = job
+        ? `Cover Letter — ${job.job_title} at ${job.company_name}`
+        : 'Cover Letter Draft';
 
       const res = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Only send job_id, type, name, content — never user_id per S1-003 §5.4.
-        // Using 'name' to match the documents table column name.
         body: JSON.stringify({
           job_id: selectedJobId,
-          type: 'resume',
+          type: 'cover_letter',
           name: title,
           content: JSON.stringify(draft),
         }),
@@ -372,22 +430,57 @@ export function ResumeGenerator({
             </div>
 
             <div className="flex items-center gap-3">
-              {/* S2-024: Save to Documents button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="h-9 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
-              >
-                {isSaving
-                  ? 'Saving...'
-                  : saveStatus === 'success'
-                    ? '✓ Saved!'
-                    : saveStatus === 'error'
-                      ? 'Save Failed'
-                      : 'Save to Documents'}
-              </Button>
+              {/* S2-024 + S3-003: Save buttons */}
+              {existingDocId ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="h-9 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+                  >
+                    {isSaving
+                      ? 'Saving...'
+                      : saveStatus === 'success'
+                        ? '✓ Version Saved!'
+                        : saveStatus === 'error'
+                          ? 'Save Failed'
+                          : 'Save as New Version'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSaveAsNew}
+                    disabled={isSaving}
+                    className="h-9 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+                  >
+                    {isSaving
+                      ? 'Saving...'
+                      : saveStatus === 'success'
+                        ? '✓ Saved!'
+                        : saveStatus === 'error'
+                          ? 'Save Failed'
+                          : 'Save as New Document'}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="h-9 px-4 text-xs font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+                >
+                  {isSaving
+                    ? 'Saving...'
+                    : saveStatus === 'success'
+                      ? '✓ Saved!'
+                      : saveStatus === 'error'
+                        ? 'Save Failed'
+                        : 'Save to Documents'}
+                </Button>
+              )}
               <Button onClick={handlePrint} className="bg-black text-white hover:bg-gray-800">
                 Print / Save as PDF
               </Button>
