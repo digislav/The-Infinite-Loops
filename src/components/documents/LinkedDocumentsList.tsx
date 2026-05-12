@@ -1,9 +1,10 @@
 'use client';
 
-// LinkedDocumentsList — S3-010: Library Visibility in Job Detail Context.
-// Shows documents linked to a specific job in a clean, focused view.
+// LinkedDocumentsList — S3-010 + S3-003.
+// S3-010: Shows documents linked to a specific job in a clean, focused view.
+// S3-003: Adds version history toggle per card using DocumentVersionHistory.
 // Designed for use inside JobDetailPanel — not the full library page.
-// Provides quick actions: inline view, export PDF, and unlink.
+// Provides quick actions: inline view, export PDF, unlink, version history.
 //
 // Per S1-002 §5.7 — all empty states must have an icon and message.
 // Per S1-003 — auth and ownership enforced on the backend.
@@ -13,13 +14,14 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, FileX } from 'lucide-react';
+import { FileText, FileX, History } from 'lucide-react';
 import { formatTimestamp } from '@/lib/utils/dateFormatters';
 import {
   exportDocumentPdf,
   parseDocumentContent,
   getDocumentPlainText,
 } from '@/lib/utils/documentExport';
+import { DocumentVersionHistory } from './DocumentVersionHistory';
 
 // Minimal shape of a document as returned by GET /api/documents?jobId=
 interface LinkedDocument {
@@ -61,6 +63,8 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
   const [downloadUrls, setDownloadUrls] = useState<Record<string, string>>({});
   // Inline action error shown at top of list.
   const [actionError, setActionError] = useState<string | null>(null);
+  // S3-003: tracks which document has its version history panel open.
+  const [versionHistoryId, setVersionHistoryId] = useState<string | null>(null);
 
   // Fetch documents linked to this job whenever jobId or refreshKey changes.
   // Auth and ownership enforced server-side per S1-003 §5.2.
@@ -72,8 +76,6 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
       setError(null);
 
       try {
-        // jobId scopes the query to only this job's documents.
-        // The backend enforces ownership — users can only see their own docs.
         const res = await fetch(`/api/documents?jobId=${encodeURIComponent(jobId)}`);
 
         if (!res.ok) {
@@ -82,8 +84,7 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
         }
 
         const json = await res.json();
-        // Filter out archived docs in the job context — per S3-008, archived
-        // docs are soft-deleted and should not appear in active views.
+        // Filter out archived docs in the job context — per S3-008.
         if (!cancelled) {
           setDocuments((json.data ?? []).filter((d: LinkedDocument) => !d.is_archived));
         }
@@ -101,7 +102,6 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
   }, [jobId, refreshKey]);
 
   // Pre-fetch a signed download URL when a file-backed document is expanded.
-  // Signed URLs expire so we fetch them on-demand, not upfront for all docs.
   // Per S1-003 §8 — we never expose the raw file path to the client.
   useEffect(() => {
     if (!expandedId) return;
@@ -123,7 +123,7 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
     };
   }, [expandedId, documents, downloadUrls]);
 
-  // Unlink a document from this job by calling PATCH /api/jobs/:jobId/documents/:docId.
+  // Unlink a document from this job.
   // Never sends user_id — ownership enforced server-side per S1-003 §5.4.
   async function handleUnlink(doc: LinkedDocument) {
     setUnlinkingId(doc.id);
@@ -141,11 +141,9 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
         return;
       }
 
-      // Remove from local state immediately so the UI updates without a refetch.
       setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
       if (expandedId === doc.id) setExpandedId(null);
-
-      // Notify parent so JobDocumentLinker can reflect the change.
+      if (versionHistoryId === doc.id) setVersionHistoryId(null);
       onUnlinked?.();
     } catch {
       setActionError('Failed to unlink document. Please try again.');
@@ -161,7 +159,6 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
       setCopiedId(doc.id);
       window.setTimeout(() => setCopiedId(null), 2000);
     } catch {
-      // Fall back to raw content if plain-text extraction fails.
       await navigator.clipboard.writeText(doc.content);
       setCopiedId(doc.id);
       window.setTimeout(() => setCopiedId(null), 2000);
@@ -212,7 +209,7 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Document count header — gives the user a clear summary at a glance. */}
+      {/* Document count header */}
       <p className="text-xs font-semibold tracking-wider text-gray-500 uppercase">
         {documents.length} document{documents.length !== 1 ? 's' : ''} linked
       </p>
@@ -228,7 +225,7 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex min-w-0 flex-col gap-0.5">
               <div className="flex flex-wrap items-center gap-2">
-                {/* Document type badge — per S1-002 §5.5 and colour tokens §4.5. */}
+                {/* Type badge */}
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     doc.type === 'cover_letter'
@@ -239,7 +236,7 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
                   {doc.type === 'cover_letter' ? 'Cover Letter' : 'Resume'}
                 </span>
 
-                {/* Status badge — draft/final. Clickable to toggle. */}
+                {/* Status badge */}
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     doc.status === 'final'
@@ -250,11 +247,10 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
                   {doc.status === 'final' ? 'Final' : 'Draft'}
                 </span>
 
-                {/* Document name — truncated if long. */}
                 <span className="truncate text-sm font-semibold text-gray-800">{doc.name}</span>
               </div>
 
-              {/* Tags row — shown beneath name if tags exist. */}
+              {/* Tags */}
               {doc.tags && doc.tags.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1">
                   {doc.tags.map((tag) => (
@@ -271,7 +267,7 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
               <span className="text-xs text-gray-400">Saved {formatTimestamp(doc.created_at)}</span>
             </div>
 
-            {/* Action buttons — View, Copy, Export PDF, Unlink */}
+            {/* Action buttons */}
             <div className="ml-2 flex shrink-0 items-center gap-1">
               <Button
                 variant="ghost"
@@ -282,7 +278,6 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
                 {expandedId === doc.id ? 'Hide' : 'View'}
               </Button>
 
-              {/* Only show Copy/Export for AI-generated docs (not uploaded files). */}
               {!doc.file_path && (
                 <>
                   <Button
@@ -304,8 +299,6 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
                 </>
               )}
 
-              {/* Unlink button — removes the association between this doc and job.
-                  Does NOT delete the document from the library. */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -318,13 +311,42 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
             </div>
           </div>
 
-          {/* Inline document preview — shown when user clicks View. */}
+          {/* S3-003: Version History toggle — shown on all non-uploaded docs.
+              Auth and ownership enforced on the backend per S1-003 §4.3. */}
+          {!doc.file_path && (
+            <div className="flex flex-col gap-1 border-t border-gray-50 px-4 pt-1 pb-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setVersionHistoryId((prev) => (prev === doc.id ? null : doc.id))}
+                className="h-7 w-full justify-start px-1 text-xs text-gray-400 hover:text-gray-600"
+              >
+                <History size={13} className="mr-1.5" />
+                {versionHistoryId === doc.id ? 'Hide Version History' : 'Version History'}
+              </Button>
+
+              {/* Inline version history panel */}
+              {versionHistoryId === doc.id && (
+                <div className="mt-1 mb-1 rounded-lg border border-gray-100 bg-gray-50 p-3">
+                  <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                    Version History
+                  </p>
+                  <DocumentVersionHistory
+                    documentId={doc.id}
+                    onRestored={() => {
+                      // Re-fetch so the card reflects the restored content.
+                      setDocuments((prev) => [...prev]);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Inline document preview */}
           {expandedId === doc.id && (
             <div className="border-t border-gray-100 px-4 py-3">
               {doc.file_path ? (
-                // File-backed document — show download link using signed URL.
-                // Signed URL is fetched from the backend, never exposed as raw path
-                // per S1-003 §8.
                 <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                   <FileText size={16} className="shrink-0 text-gray-400" />
                   <span className="text-sm text-gray-600">
@@ -345,7 +367,6 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
                   )}
                 </div>
               ) : (
-                // AI-generated document — render parsed content inline.
                 <DocumentPreview doc={doc} />
               )}
             </div>
@@ -357,10 +378,7 @@ export function LinkedDocumentsList({ jobId, refreshKey, onUnlinked }: LinkedDoc
 }
 
 // DocumentPreview — renders the parsed JSON content of an AI-generated document.
-// Kept as a sub-component to keep LinkedDocumentsList readable.
-// Handles both cover_letter and resume types.
 function DocumentPreview({ doc }: { doc: LinkedDocument }) {
-  // Inline interfaces for the two AI document shapes.
   interface CoverLetterContent {
     name?: string;
     location?: string;
