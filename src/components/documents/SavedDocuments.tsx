@@ -104,6 +104,7 @@ export function SavedDocuments({
   const [addingTagId, setAddingTagId] = useState<string | null>(null);
   const [newTagText, setNewTagText] = useState<string>('');
   const [downloadUrls, setDownloadUrls] = useState<Record<string, string>>({});
+  const [announcement, setAnnouncement] = useState<string>('');
 
   const allUniqueTags = Array.from(new Set(documents.flatMap((d) => d.tags || [])));
 
@@ -180,10 +181,12 @@ export function SavedDocuments({
     try {
       await navigator.clipboard.writeText(getDocumentPlainText(doc));
       setCopiedId(doc.id);
+      setAnnouncement('Document copied to clipboard.');
       window.setTimeout(() => setCopiedId(null), 2000);
     } catch {
       await navigator.clipboard.writeText(doc.content);
       setCopiedId(doc.id);
+      setAnnouncement('Document copied to clipboard.');
       window.setTimeout(() => setCopiedId(null), 2000);
     }
   }
@@ -268,6 +271,7 @@ export function SavedDocuments({
       const res = await fetch(`/api/documents/${doc.id}`, { method: 'DELETE' });
       if (!res.ok) return;
       setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
+      setAnnouncement(`"${doc.name}" deleted.`);
       if (expandedId === doc.id) setExpandedId(null);
     } catch {
       // Silently fail.
@@ -757,6 +761,9 @@ export function SavedDocuments({
           </div>
         ))
       )}
+      <div role="status" aria-live="polite" className="sr-only">
+        {announcement}
+      </div>
     </div>
   );
 }
