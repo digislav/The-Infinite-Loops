@@ -1,9 +1,12 @@
 'use client';
 
-// SavedDocuments - S2-024 + S3-005 + S3-006 + S3-007.
+// SavedDocuments - S2-024 + S3-003 + S3-005 + S3-006 + S3-007.
 // Displays all saved document drafts for the authenticated user.
 // Shows cover letters and resumes with their linked job context.
-// Users can view, copy, export, duplicate, rename, or delete saved documents.
+// Users can view, copy, export, duplicate, rename, archive, or delete saved documents.
+// S3-003: version history panel per document with restore capability.
+//         "Rewrite as New Version" section in expanded view uses existingDocId
+//         to save directly as a new version instead of a new document.
 // S3-006: filter by type and sort by date/name via LibraryControls.
 // S3-007: duplicate and rename actions for saved documents.
 //
@@ -15,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, History } from 'lucide-react';
 import { buildDuplicateDocumentName } from '@/lib/utils/documentNames';
 import { formatTimestamp } from '@/lib/utils/dateFormatters';
 import {
@@ -24,6 +27,9 @@ import {
   getDocumentPlainText,
 } from '@/lib/utils/documentExport';
 import { LibraryControls, DocumentTypeFilter, DocumentSortOrder } from './LibraryControls';
+import { DocumentVersionHistory } from './DocumentVersionHistory';
+import { CoverLetterGenerator } from './CoverLetterGenerator';
+import { ResumeGenerator } from './ResumeGenerator';
 
 interface SavedDocument {
   id: string;
@@ -105,6 +111,12 @@ export function SavedDocuments({
   const [newTagText, setNewTagText] = useState<string>('');
   const [downloadUrls, setDownloadUrls] = useState<Record<string, string>>({});
 
+  // S3-003: tracks which document has its version history panel open.
+  const [versionHistoryId, setVersionHistoryId] = useState<string | null>(null);
+
+  // S3-003: tracks which document has its "Rewrite as New Version" panel open.
+  const [rewriteVersionId, setRewriteVersionId] = useState<string | null>(null);
+
   const allUniqueTags = Array.from(new Set(documents.flatMap((d) => d.tags || [])));
 
   const filteredAndSorted = useMemo(() => {
@@ -126,6 +138,28 @@ export function SavedDocuments({
 
     return result;
   }, [documents, typeFilter, sortOrder]);
+
+  // fetchDocuments is extracted so it can be called by the version restore
+  // callback and the rewrite-as-new-version callback per S3-003.
+  async function fetchDocuments() {
+    setLoading(true);
+    setError(null);
+    try {
+      const base = jobId ? `/api/documents?jobId=${encodeURIComponent(jobId)}` : '/api/documents';
+      const url = showArchived ? `${base}${jobId ? '&' : '?'}showArchived=true` : base;
+      const res = await fetch(url);
+      if (!res.ok) {
+        setError('Could not load saved documents.');
+        return;
+      }
+      const json = await res.json();
+      setDocuments(json.data ?? []);
+    } catch {
+      setError('Could not load saved documents.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -203,7 +237,6 @@ export function SavedDocuments({
 
   async function handleRename(doc: SavedDocument) {
     const nextName = window.prompt('Rename this document:', doc.name)?.trim();
-
     if (!nextName || nextName === doc.name) return;
 
     try {
@@ -269,6 +302,8 @@ export function SavedDocuments({
       if (!res.ok) return;
       setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
       if (expandedId === doc.id) setExpandedId(null);
+      if (versionHistoryId === doc.id) setVersionHistoryId(null);
+      if (rewriteVersionId === doc.id) setRewriteVersionId(null);
     } catch {
       // Silently fail.
     }
@@ -301,6 +336,8 @@ export function SavedDocuments({
       if (!res.ok) return;
       setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
       if (expandedId === doc.id) setExpandedId(null);
+      if (versionHistoryId === doc.id) setVersionHistoryId(null);
+      if (rewriteVersionId === doc.id) setRewriteVersionId(null);
     } catch {
       // Silently fail.
     }
@@ -524,6 +561,119 @@ export function SavedDocuments({
               </div>
             </div>
 
+            {/* S3-003: Version History and Rewrite toggles — shown on all
+                non-archived docs. Auth and ownership enforced on the
+                backend per S1-003 §4.3. */}
+            {!showArchived && (
+              <div className="flex flex-col gap-1 border-t border-gray-50 px-4 pt-1 pb-2">
+                {/* Version History toggle */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setVersionHistoryId((prev) => (prev === doc.id ? null : doc.id))}
+                  className="h-7 w-full justify-start px-1 text-xs text-gray-400 hover:text-gray-600"
+                >
+                  <History size={13} className="mr-1.5" />
+                  {versionHistoryId === doc.id ? 'Hide Version History' : 'Version History'}
+                </Button>
+
+                {/* Inline version history panel */}
+                {versionHistoryId === doc.id && (
+                  <div className="mt-1 mb-1 rounded-lg border border-gray-100 bg-gray-50 p-3">
+                    <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                      Version History
+                    </p>
+                    <DocumentVersionHistory
+                      documentId={doc.id}
+                      onRestored={() => {
+                        void fetchDocuments();
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* S3-003: Rewrite as New Version toggle — only for AI-generated
+                    docs (not uploads). Passes existingDocId to the generator so
+                    saving creates a new version instead of a new document. */}
+                {!doc.file_path && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setRewriteVersionId((prev) => (prev === doc.id ? null : doc.id))
+                      }
+                      className="h-7 w-full justify-start px-1 text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      <Plus size={13} className="mr-1.5" />
+                      {rewriteVersionId === doc.id
+                        ? 'Hide Rewrite Panel'
+                        : 'Rewrite as New Version'}
+                    </Button>
+
+                    {/* Inline rewrite panel — uses the generator with existingDocId
+                        so saving goes to POST /api/documents/:id/versions instead
+                        of POST /api/documents per S3-003. */}
+                    {rewriteVersionId === doc.id && (
+                      <div className="mt-1 mb-1 rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+                        <p className="mb-3 text-xs font-semibold tracking-wider text-blue-700 uppercase">
+                          Rewrite as New Version
+                        </p>
+                        <p className="mb-3 text-xs text-gray-500">
+                          Generate a new version of this document. Saving will add it as v
+                          {/* version number shown dynamically */} to the version history instead of
+                          creating a new document.
+                        </p>
+                        {doc.type === 'cover_letter' ? (
+                          <CoverLetterGenerator
+                            existingDocId={doc.id}
+                            presetJob={
+                              doc.job_id
+                                ? {
+                                    id: doc.job_id,
+                                    job_title: '',
+                                    company_name: '',
+                                    current_stage: '',
+                                  }
+                                : undefined
+                            }
+                            hideJobSelector={true}
+                            onSaved={() => {
+                              void fetchDocuments();
+                              // Open version history so user can see the new version.
+                              setVersionHistoryId(doc.id);
+                              setRewriteVersionId(null);
+                            }}
+                          />
+                        ) : (
+                          <ResumeGenerator
+                            existingDocId={doc.id}
+                            presetJob={
+                              doc.job_id
+                                ? {
+                                    id: doc.job_id,
+                                    job_title: '',
+                                    company_name: '',
+                                    current_stage: '',
+                                  }
+                                : undefined
+                            }
+                            hideJobSelector={true}
+                            onSaved={() => {
+                              void fetchDocuments();
+                              // Open version history so user can see the new version.
+                              setVersionHistoryId(doc.id);
+                              setRewriteVersionId(null);
+                            }}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             {expandedId === doc.id && (
               <div className="border-t border-gray-100 px-4 py-3">
                 <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -605,7 +755,6 @@ export function SavedDocuments({
                 )}
 
                 {(() => {
-                  // Uploaded files have a file_path — show a download link instead of parsed content.
                   if (doc.file_path) {
                     const signedUrl = downloadUrls[doc.id];
                     return (

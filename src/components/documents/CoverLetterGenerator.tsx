@@ -1,19 +1,19 @@
 'use client';
 
-// CoverLetterGenerator — S2-022 + S2-023 + S2-024.
+// CoverLetterGenerator — S2-022 + S2-023 + S2-024 + S3-003.
 // S2-022: Generates a tailored cover letter draft using the user's
 // profile data and a selected job via the Gemini AI API.
 // S2-023: Adds rewrite/improve actions so users can refine the draft
-// with a custom instruction (e.g. "make it more concise", "add more
-// technical detail", "make the tone more formal").
+// with a custom instruction.
 // S2-024: Adds save draft functionality so users can persist generated
 // cover letters linked to job context.
+// S3-003: existingDocId prop — when set, saving adds a new version to
+// the existing document instead of creating a new one.
 //
 // Per S1-004 — AI-generated content is clearly labelled as a draft.
 // Per S1-002 §5.3 — uses controlled inputs throughout.
 // Per S1-003 — auth and ownership enforced on the backend.
 //   We never send profile data from the client — only jobId.
-//   For rewrite we only send the draft text and instruction.
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,6 @@ interface CoverLetterData {
 }
 
 // Preset rewrite instructions — common improvement actions.
-// Users can also type a custom instruction.
 const PRESET_INSTRUCTIONS = [
   {
     label: 'Make it more concise',
@@ -83,12 +82,16 @@ interface CoverLetterGeneratorProps {
   onSaved?: () => void;
   presetJob?: JobOption;
   hideJobSelector?: boolean;
+  // S3-003: When provided, saving adds a new version to this document
+  // instead of creating a new one. Used by SavedDocuments rewrite flow.
+  existingDocId?: string;
 }
 
 export function CoverLetterGenerator({
   onSaved,
   presetJob,
   hideJobSelector = false,
+  existingDocId,
 }: CoverLetterGeneratorProps) {
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [jobsLoading, setJobsLoading] = useState(!presetJob);
@@ -97,30 +100,23 @@ export function CoverLetterGenerator({
   const [draft, setDraft] = useState<CoverLetterData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-
-  // S2-023: Rewrite state
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [selectedPreset, setSelectedPreset] = useState('');
   const [customInstruction, setCustomInstruction] = useState('');
   const [isRewriting, setIsRewriting] = useState(false);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
 
-  // S2-024: Save state
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
-
   useEffect(() => {
     setSelectedJobId(presetJob?.id ?? '');
     setDraft(null);
     setError(null);
-    setCopied(false);
+    setSaveStatus('idle');
     setSelectedPreset('');
     setCustomInstruction('');
     setRewriteError(null);
-    setSaveStatus('idle');
   }, [presetJob]);
 
-  // Fetch the user's jobs on mount to populate the job selector.
-  // Auth and ownership enforced server-side per S1-003 §5.4.
   useEffect(() => {
     if (presetJob) {
       setJobs([presetJob]);
@@ -135,13 +131,11 @@ export function CoverLetterGenerator({
         const res = await fetch('/api/jobs');
         if (!res.ok) return;
         const json = await res.json();
-        // Filter out archived jobs — no cover letter needed for those.
         const activeJobs = (json.data ?? []).filter(
           (j: JobOption) => j.current_stage !== 'Archived',
         );
         if (!cancelled) setJobs(activeJobs);
       } catch {
-        // Silently fail — user will see empty dropdown.
       } finally {
         if (!cancelled) setJobsLoading(false);
       }
@@ -155,27 +149,21 @@ export function CoverLetterGenerator({
 
   const selectedJob = presetJob ?? jobs.find((job) => job.id === selectedJobId);
 
-  // handleGenerate — sends the selected jobId to the backend API.
-  // The backend fetches profile and job data server-side —
-  // we never send raw profile data from the client per S1-003 §5.4.
   async function handleGenerate() {
     if (!selectedJobId) return;
 
     setIsGenerating(true);
     setError(null);
     setDraft(null);
-    setCopied(false);
+    setSaveStatus('idle');
     setSelectedPreset('');
     setCustomInstruction('');
     setRewriteError(null);
-    setSaveStatus('idle');
 
     try {
       const res = await fetch('/api/ai/generate-cover-letter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Only send jobId — profile data is fetched server-side
-        // per S1-003 §5.4. user_id comes from the session.
         body: JSON.stringify({ jobId: selectedJobId }),
       });
 
@@ -187,7 +175,9 @@ export function CoverLetterGenerator({
           return;
         }
         if (resJson.error?.code === 'INSUFFICIENT_CONTEXT') {
-          setError('Insufficient profile data! You must verify your Profile is filled out.');
+          setError(
+            'Insufficient profile data. Please fill out your Experience, Education, or Skills in your Profile.',
+          );
           return;
         }
         setError('Failed to generate cover letter. Please try again.');
@@ -202,9 +192,6 @@ export function CoverLetterGenerator({
     }
   }
 
-  // handleRewrite — S2-023: sends the current draft and a rewrite
-  // instruction to the backend. Only the draft text and instruction
-  // are sent — no profile data or user_id per S1-003 §5.4.
   async function handleRewrite() {
     const instruction = selectedPreset === 'custom' ? customInstruction : selectedPreset;
 
@@ -213,51 +200,43 @@ export function CoverLetterGenerator({
       return;
     }
 
-    if (!draft || !draft.body.trim()) {
+    if (!draft) {
       setRewriteError('No draft to rewrite. Generate a cover letter first.');
       return;
     }
 
     setIsRewriting(true);
     setRewriteError(null);
-    setCopied(false);
     setSaveStatus('idle');
 
     try {
       const res = await fetch('/api/ai/rewrite-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ draft: draft.body, instruction }),
+        body: JSON.stringify({ draft, instruction }),
       });
 
       if (!res.ok) {
-        setRewriteError('Failed to rewrite draft. Please try again.');
+        setRewriteError('Failed to rewrite cover letter. Please try again.');
         return;
       }
 
       const json = await res.json();
-      setDraft({ ...draft, body: json.data?.draft ?? draft.body });
+      setDraft(json.data?.draft ?? draft);
       setSelectedPreset('');
       setCustomInstruction('');
     } catch {
-      setRewriteError('Failed to rewrite draft. Please try again.');
+      setRewriteError('Failed to rewrite cover letter. Please try again.');
     } finally {
       setIsRewriting(false);
     }
   }
 
-  // handleCopy — copies the draft to clipboard.
-  async function handleCopy() {
-    if (!draft) return;
-    const fullText = `${draft.name}\n${draft.location}\n\n${draft.date}\n\n${draft.greeting}\n\n${draft.body}\n\n${draft.signoff}`;
-    await navigator.clipboard.writeText(fullText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  // handleSave — S2-024: saves the current draft as a document record.
-  // Only job_id, type, name, and content are sent — user_id comes from
-  // the session server-side per S1-003 §5.4.
+  // handleSave — S2-024 + S3-003.
+  // If existingDocId is provided, saves as a new version of that document
+  // via POST /api/documents/:id/versions — per S3-003 versioning flow.
+  // Otherwise creates a new document via POST /api/documents.
+  // user_id always comes from the session server-side per S1-003 §5.4.
   async function handleSave() {
     if (!draft || !selectedJobId) return;
 
@@ -270,18 +249,29 @@ export function CoverLetterGenerator({
         ? `Cover Letter — ${job.job_title} at ${job.company_name}`
         : 'Cover Letter Draft';
 
-      const res = await fetch('/api/documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // Only send job_id, type, name, content — never user_id per S1-003 §5.4.
-        // Using 'name' to match the documents table column name.
-        body: JSON.stringify({
-          job_id: selectedJobId,
-          type: 'cover_letter',
-          name: title,
-          content: JSON.stringify(draft),
-        }),
-      });
+      let res: Response;
+
+      if (existingDocId) {
+        // S3-003: Save as a new version of the existing document.
+        // Never sends user_id — ownership enforced server-side per S1-003 §5.4.
+        res = await fetch(`/api/documents/${existingDocId}/versions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: JSON.stringify(draft) }),
+        });
+      } else {
+        // Default: create a brand new document.
+        res = await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            job_id: selectedJobId,
+            type: 'cover_letter',
+            name: title,
+            content: JSON.stringify(draft),
+          }),
+        });
+      }
 
       if (!res.ok) {
         setSaveStatus('error');
@@ -289,13 +279,20 @@ export function CoverLetterGenerator({
       }
 
       setSaveStatus('success');
-      // Notify parent to refresh the saved documents list.
       if (onSaved) onSaved();
     } catch {
       setSaveStatus('error');
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleCopy() {
+    if (!draft) return;
+    const text = `${draft.greeting}\n\n${draft.body}\n\n${draft.signoff}`;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
   }
 
   function handlePrint() {
@@ -309,91 +306,78 @@ export function CoverLetterGenerator({
 
   return (
     <div className="flex flex-col gap-6 print:m-0 print:gap-0">
-      {/* Job selector — pick which job to tailor the cover letter for */}
-      {!hideJobSelector && (
-        <div className="flex flex-col gap-1.5 print:hidden">
-          <Label htmlFor="job-select" className="text-sm font-medium text-gray-700">
-            Select a Job <span className="text-red-500">*</span>
-          </Label>
-          {jobsLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : jobs.length === 0 ? (
-            <p className="text-sm text-gray-400">
-              No active jobs found. Add a job to the dashboard first.
+      <div className="flex flex-col gap-6 print:hidden">
+        {!hideJobSelector && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="cover-letter-job-select" className="text-sm font-medium text-gray-700">
+              Select a Target Job <span className="text-red-500">*</span>
+            </Label>
+            {jobsLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : jobs.length === 0 ? (
+              <p className="text-sm text-gray-400">
+                No active jobs found. Add a job to the dashboard first.
+              </p>
+            ) : (
+              <Select value={selectedJobId} onValueChange={(val) => setSelectedJobId(val ?? '')}>
+                <SelectTrigger id="cover-letter-job-select" className="w-full">
+                  <SelectValue placeholder="Choose the job to tailor this cover letter for...">
+                    {selectedJobId
+                      ? (() => {
+                          const job = jobs.find((j) => j.id === selectedJobId);
+                          return job ? `${job.job_title} — ${job.company_name}` : selectedJobId;
+                        })()
+                      : null}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {jobs.map((job) => (
+                    <SelectItem key={job.id} value={job.id}>
+                      {job.job_title} — {job.company_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
+
+        {hideJobSelector && selectedJob && selectedJob.job_title && (
+          <div className="rounded-md border border-blue-100 bg-blue-50/60 px-4 py-3">
+            <p className="text-sm font-medium text-blue-900">
+              Generating for {selectedJob.job_title} at {selectedJob.company_name}
             </p>
-          ) : (
-            <Select value={selectedJobId} onValueChange={(val) => setSelectedJobId(val ?? '')}>
-              <SelectTrigger id="job-select" className="w-full">
-                <SelectValue placeholder="Choose a job to tailor this cover letter for...">
-                  {selectedJobId
-                    ? (() => {
-                        const job = jobs.find((j) => j.id === selectedJobId);
-                        return job ? `${job.job_title} — ${job.company_name}` : selectedJobId;
-                      })()
-                    : null}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {jobs.map((job) => (
-                  <SelectItem key={job.id} value={job.id}>
-                    {job.job_title} — {job.company_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleGenerate}
+            disabled={!selectedJobId || isGenerating}
+            className="bg-[#2E75B6] text-white hover:bg-[#1F4E79] disabled:opacity-50"
+          >
+            {isGenerating ? 'Generating...' : 'Generate Cover Letter'}
+          </Button>
+          {isGenerating && (
+            <p className="text-sm text-gray-400">Tailoring to job description... (Takes ~10s)</p>
           )}
         </div>
-      )}
 
-      {hideJobSelector && selectedJob && (
-        <div className="rounded-md border border-blue-100 bg-blue-50/60 px-4 py-3 print:hidden">
-          <p className="text-sm font-medium text-blue-900">
-            Generating for {selectedJob.job_title} at {selectedJob.company_name}
-          </p>
-        </div>
-      )}
-
-      {/* Generate button */}
-      <div className="flex items-center gap-3 print:hidden">
-        <Button
-          onClick={handleGenerate}
-          disabled={!selectedJobId || isGenerating}
-          className="bg-[#2E75B6] text-white hover:bg-[#1F4E79] disabled:opacity-50"
-        >
-          {isGenerating ? 'Generating...' : 'Generate Cover Letter'}
-        </Button>
-        {isGenerating && <p className="text-sm text-gray-400">This may take a few seconds...</p>}
+        {error && <p className="text-sm text-red-500">{error}</p>}
       </div>
 
-      {/* Generation error state — human-friendly per S1-001 §6.3 */}
-      {error && <p className="text-sm text-red-500 print:hidden">{error}</p>}
-
-      {/* LOADING STATE — skeleton while generating */}
       {isGenerating && (
-        <div className="flex flex-col gap-2 print:hidden">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
+        <div className="flex flex-col gap-4 print:hidden">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-[200px] w-full" />
         </div>
       )}
 
-      {/* DRAFT OUTPUT — shown after successful generation.
-          Per S1-004 — clearly labelled as an AI-generated draft. */}
       {draft && !isGenerating && (
         <div className="mt-4 flex flex-col gap-4 print:mt-0">
-          <div className="flex flex-col justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 p-4 sm:flex-row sm:items-center print:hidden">
-            <div className="flex flex-col gap-0.5">
-              <h3 className="text-sm font-semibold text-gray-700">AI-Generated Draft</h3>
-              <p className="text-xs text-amber-600">
-                ⚠ Review and edit the body text below before printing or copying.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
+          {/* Action bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-200 bg-gray-50 p-4 print:hidden">
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -402,7 +386,8 @@ export function CoverLetterGenerator({
               >
                 {copied ? '✓ Copied!' : 'Copy Text'}
               </Button>
-              {/* S2-024: Save Draft button */}
+
+              {/* S2-024 + S3-003: Save button — label changes based on context. */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -413,36 +398,35 @@ export function CoverLetterGenerator({
                 {isSaving
                   ? 'Saving...'
                   : saveStatus === 'success'
-                    ? '✓ Saved!'
+                    ? existingDocId
+                      ? '✓ Version Saved!'
+                      : '✓ Saved!'
                     : saveStatus === 'error'
                       ? 'Save Failed'
-                      : 'Save Draft'}
-              </Button>
-              <Button onClick={handlePrint} className="bg-black text-white hover:bg-gray-800">
-                Print / Save as PDF
+                      : existingDocId
+                        ? 'Save as New Version'
+                        : 'Save to Documents'}
               </Button>
             </div>
+
+            <Button onClick={handlePrint} className="bg-black text-white hover:bg-gray-800">
+              Print / Save as PDF
+            </Button>
           </div>
 
-          <div className="print:hidden">
-            <Label className="mb-2 block text-sm font-medium text-gray-700">Edit Letter Body</Label>
-            <textarea
-              value={draft.body}
-              onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-              rows={12}
-              className="w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-sm leading-relaxed text-gray-700 placeholder:text-gray-400 focus:border-[#2E75B6] focus:ring-2 focus:ring-[#2E75B6]/50 focus:outline-none"
-            />
+          <div className="mb-2 text-xs font-medium text-amber-600 print:hidden">
+            ⚠ This is an AI-generated draft. Review carefully before sending.
           </div>
 
-          {/* S2-023: REWRITE / IMPROVE SECTION */}
+          {/* Improve this Draft section */}
           <div className="flex flex-col gap-3 rounded-lg border border-gray-100 bg-gray-50 p-4 print:hidden">
             <h4 className="text-sm font-semibold text-gray-700">Improve this Draft</h4>
             <p className="text-xs text-gray-400">
-              Select a preset action or write your own instruction to refine the body paragraphs.
+              Select a preset action or write your own instruction to refine the cover letter.
             </p>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="rewrite-preset" className="text-xs text-gray-500">
+              <Label htmlFor="cover-letter-rewrite-preset" className="text-xs text-gray-500">
                 Choose an action
               </Label>
               <Select
@@ -453,7 +437,7 @@ export function CoverLetterGenerator({
                   setRewriteError(null);
                 }}
               >
-                <SelectTrigger id="rewrite-preset" className="w-full text-sm">
+                <SelectTrigger id="cover-letter-rewrite-preset" className="w-full text-sm">
                   <SelectValue placeholder="Select an improvement action..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -468,17 +452,17 @@ export function CoverLetterGenerator({
 
             {selectedPreset === 'custom' && (
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="custom-instruction" className="text-xs text-gray-500">
+                <Label htmlFor="cover-letter-custom-instruction" className="text-xs text-gray-500">
                   Your instruction
                 </Label>
                 <Input
-                  id="custom-instruction"
+                  id="cover-letter-custom-instruction"
                   value={customInstruction}
                   onChange={(e) => {
                     setCustomInstruction(e.target.value);
                     setRewriteError(null);
                   }}
-                  placeholder="e.g. Make the opening paragraph more impactful"
+                  placeholder="e.g. Make the opening paragraph more compelling"
                   className="text-sm"
                 />
               </div>
@@ -493,7 +477,7 @@ export function CoverLetterGenerator({
                 disabled={isRewriting || !selectedPreset}
                 className="bg-[#2E75B6] text-white hover:bg-[#1F4E79] disabled:opacity-50"
               >
-                {isRewriting ? 'Improving...' : 'Improve Letter Body'}
+                {isRewriting ? 'Improving...' : 'Improve Cover Letter'}
               </Button>
               <Button
                 variant="ghost"
@@ -506,60 +490,36 @@ export function CoverLetterGenerator({
               </Button>
             </div>
 
-            {isRewriting && (
-              <p className="text-xs text-gray-400">Refining your body paragraphs...</p>
-            )}
+            {isRewriting && <p className="text-xs text-gray-400">Refining your cover letter...</p>}
           </div>
 
+          {/* Cover letter preview */}
           <div
             id="cover-letter-print-canvas"
-            className="min-h-[800px] w-full border border-gray-300 bg-white p-12 text-gray-900 shadow-sm print:w-full print:border-none print:shadow-none"
+            className="min-h-[600px] w-full border border-gray-300 bg-white p-10 text-gray-900 shadow-sm print:w-full print:border-none print:p-0 print:shadow-none"
           >
-            <div className="mx-auto flex max-w-3xl flex-col gap-6 font-serif">
-              <div className="flex flex-col">
-                <h1 className="text-3xl font-bold tracking-wide uppercase">{draft.name}</h1>
-                <p className="mt-1 text-sm">{draft.location}</p>
-                {draft.links &&
-                  (draft.links.linkedin || draft.links.github || draft.links.portfolio) && (
-                    <div className="mt-2 flex flex-wrap gap-4 text-xs font-semibold text-[#2E75B6]">
-                      {draft.links.linkedin && draft.links.linkedin !== 'None' && (
-                        <a
-                          href={draft.links.linkedin}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="hover:underline"
-                        >
-                          LinkedIn
-                        </a>
-                      )}
-                      {draft.links.github && draft.links.github !== 'None' && (
-                        <a
-                          href={draft.links.github}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="hover:underline"
-                        >
-                          GitHub
-                        </a>
-                      )}
-                      {draft.links.portfolio && draft.links.portfolio !== 'None' && (
-                        <a
-                          href={draft.links.portfolio}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="hover:underline"
-                        >
-                          Portfolio
-                        </a>
-                      )}
-                    </div>
-                  )}
+            <div className="mx-auto flex max-w-2xl flex-col gap-6 font-serif">
+              <div>
+                <h2 className="text-xl font-bold tracking-wide uppercase">{draft.name}</h2>
+                <p className="mt-0.5 text-sm text-gray-600">{draft.location}</p>
+                {draft.links && (
+                  <div className="mt-1 flex flex-wrap gap-4 text-xs font-semibold text-[#2E75B6]">
+                    {draft.links.linkedin && draft.links.linkedin !== 'None' && (
+                      <span>{draft.links.linkedin}</span>
+                    )}
+                    {draft.links.github && draft.links.github !== 'None' && (
+                      <span>{draft.links.github}</span>
+                    )}
+                    {draft.links.portfolio && draft.links.portfolio !== 'None' && (
+                      <span>{draft.links.portfolio}</span>
+                    )}
+                  </div>
+                )}
               </div>
-
-              <div className="mt-8 text-sm">{draft.date}</div>
-              <div className="mt-8 text-sm">{draft.greeting}</div>
-              <div className="mt-2 text-sm leading-loose whitespace-pre-wrap">{draft.body}</div>
-              <div className="mt-6 text-sm whitespace-pre-wrap">{draft.signoff}</div>
+              <p className="text-sm">{draft.date}</p>
+              <p className="text-sm">{draft.greeting}</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{draft.body}</p>
+              <p className="text-sm whitespace-pre-wrap">{draft.signoff}</p>
             </div>
           </div>
         </div>
